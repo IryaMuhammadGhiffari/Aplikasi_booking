@@ -44,6 +44,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Environment files
+.env
+.env.backup
+.env.production
+
 # Laravel vendor (ada di laravel/vendor)
 /vendor/
 laravel/vendor/
