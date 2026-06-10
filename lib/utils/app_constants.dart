@@ -10,7 +10,7 @@
 
 class AppConstants {
   static const String baseUrl =
-      'https://aluminum-flier-subtract.ngrok-free.dev/api'; // ngrok tunnel
+      'https://booking-barbershop-1.onrender.com/api'; // Render
 
   static const String appName = 'Arfan Barbershop';
   static const String tokenKey = 'auth_token';

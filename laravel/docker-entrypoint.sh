@@ -1,21 +1,16 @@
 #!/usr/bin/env bash
-# Entrypoint untuk Arfan Barbershop API di Render (Docker)
 set -e
 
-echo ">>> Preparing .env if missing..."
+# Setup .env kalau belum ada
 if [ ! -f .env ]; then
-    if [ -f .env.example ]; then
-        cp .env.example .env
-    else
-        touch .env
-    fi
+    cp .env.example .env 2>/dev/null || touch .env
 fi
 
-echo ">>> Generating APP_KEY if missing..."
-php artisan key:generate --force --no-interaction 2>/dev/null || true
+# Generate APP_KEY (timeout 10 detik biar gak ngehang)
+timeout 10 php artisan key:generate --force --no-interaction 2>/dev/null || true
 
-echo ">>> Running migrations..."
-php artisan migrate --force 2>/dev/null || true
+# Migrasi (timeout 30 detik)
+timeout 30 php artisan migrate --force 2>/dev/null || true
 
-echo ">>> Starting Apache..."
+# Start Apache
 exec apache2-foreground
