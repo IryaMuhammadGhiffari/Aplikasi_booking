@@ -45,8 +45,9 @@ jobs:
 
   build:
     name: Build Release APK
-    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [analyze, test]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -72,3 +73,42 @@ jobs:
           name: app-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+  release:
+    name: Create GitHub Release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-apk
+          path: apk/
+
+      - name: Generate tag & release info
+        id: release_info
+        run: |
+          VERSION=$(grep '^version: ' pubspec.yaml | sed 's/version: //')
+          TAG="v${VERSION}+build.${GITHUB_RUN_NUMBER}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "commit=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Create or update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_info.outputs.tag }}
+          name: Release ${{ steps.release_info.outputs.version }} (Build ${{ github.run_number }})
+          body: |
+            ## Aplikasi Booking Arfan Barbershop
+
+            **Version:** ${{ steps.release_info.outputs.version }}
+            **Commit:** ${{ steps.release_info.outputs.commit }}
+            **Build:** ${{ github.run_number }}
+          files: apk/app-release.apk
+          fail_on_unmatched_files: false
