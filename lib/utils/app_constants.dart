@@ -1,16 +1,16 @@
 // lib/utils/app_constants.dart
 //
-// PENTING: Ganti baseUrl dengan IP komputer kamu!
-// Cara cari IP:
-//   Windows → buka CMD → ketik: ipconfig
-//   Cari "IPv4 Address" misalnya 192.168.1.5
-//   Lalu isi: http://192.168.1.5:8000/api
-//
-// JANGAN pakai localhost atau 127.0.0.1 dari HP!
+// API_BASE_URL di-inject via --dart-define saat CI/CD build.
+// Fallback: Render production URL.
+// Ganti lokal: flutter build apk --dart-define=API_BASE_URL=http://IP:8000/api
 
 class AppConstants {
-  static const String baseUrl =
-      'https://booking-barbershop-1.onrender.com/api'; // Render
+  /// Base URL API — di-inject via --dart-define di CI/CD.
+  /// Fallback: Render production URL.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://booking-barbershop-1.onrender.com/api',
+  );
 
   static const String appName = 'Arfan Barbershop';
   static const String tokenKey = 'auth_token';
