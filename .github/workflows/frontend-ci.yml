@@ -65,7 +65,14 @@ jobs:
         run: flutter pub get
 
       - name: Build release APK
-        run: flutter build apk --release --dart-define=API_BASE_URL=${{ secrets.API_BASE_URL }}
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
+          if [ -n "$API_BASE_URL" ]; then
+            flutter build apk --release --dart-define="API_BASE_URL=$API_BASE_URL"
+          else
+            flutter build apk --release
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

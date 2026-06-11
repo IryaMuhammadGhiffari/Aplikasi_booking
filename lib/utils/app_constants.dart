@@ -7,10 +7,14 @@
 class AppConstants {
   /// Base URL API — di-inject via --dart-define di CI/CD.
   /// Fallback: Render production URL.
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'https://booking-barbershop-1.onrender.com/api',
-  );
+  /// Safety: jika API_BASE_URL kosong, pakai default.
+  static const String _defaultBaseUrl =
+      'https://booking-barbershop-1.onrender.com/api';
+
+  static String get baseUrl {
+    const env = String.fromEnvironment('API_BASE_URL');
+    return env.isEmpty ? _defaultBaseUrl : env;
+  }
 
   static const String appName = 'Arfan Barbershop';
   static const String tokenKey = 'auth_token';
