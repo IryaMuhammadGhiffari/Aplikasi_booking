@@ -253,7 +253,7 @@ class BookingController extends Controller
         $booking->update(['status' => $request->status]);
 
         if ($request->status === 'cancelled') {
-            if ($booking->payment && in_array($booking->payment->status, ['pending'])) {
+            if ($booking->payment && in_array($booking->payment->status, ['pending', 'paid'])) {
                 $booking->payment->update(['status' => 'failed']);
             }
         }
