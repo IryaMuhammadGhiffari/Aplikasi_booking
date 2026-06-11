@@ -108,8 +108,6 @@ class ApiService {
       _dio.post('/bookings/$bookingId/pay-cashless');
   Future<Response> checkPaymentStatus(int bookingId) =>
       _dio.get('/bookings/$bookingId/payment-status');
-  Future<Response> confirmCashPayment(int paymentId) =>
-      _dio.patch('/admin/payments/$paymentId/confirm-cash');
   Future<Response> adminGetTransactions() => _dio.get('/admin/transactions');
   Future<Response> getRevenueReport(String start, String end) =>
       _dio.get('/admin/revenue-report',

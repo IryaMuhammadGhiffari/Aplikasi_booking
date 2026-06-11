@@ -257,14 +257,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          'Pembayaran tunai terdaftar. Bayar saat datang ke toko.',
-          style: GoogleFonts.poppins(color: Colors.white),
-        ),
-        backgroundColor: AppColors.success,
-      ));
-      Navigator.pop(context);
+      await context.read<BookingProvider>().fetchMyBookings();
+      if (!mounted) return;
+      setState(() => _showSuccess = true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(context.read<BookingProvider>().error ?? 'Gagal'),

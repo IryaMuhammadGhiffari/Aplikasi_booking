@@ -58,7 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('transactions',             [PaymentController::class, 'adminTransactions']);
         Route::get('revenue-report',           [PaymentController::class, 'revenueReport']);
-        Route::patch('payments/{id}/confirm-cash', [PaymentController::class, 'confirmCashPayment']);
+        // Route::patch('payments/{id}/confirm-cash'); // Dihapus — cashless auto-paid sejak Juni 2026
     });
 });
 

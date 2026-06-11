@@ -182,7 +182,7 @@ class TransactionHelpers {
       case 'paid':
         return 'Dibayar';
       case 'pending':
-        return method == 'cashless' ? 'Tunggu Tunai' : 'Menunggu Pembayaran';
+        return 'Menunggu Pembayaran';
       case 'expired':
         return 'Kadaluarsa';
       case 'failed':

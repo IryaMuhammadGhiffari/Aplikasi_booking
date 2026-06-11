@@ -106,10 +106,10 @@ class BookingModel {
   }
 
   String get paymentStatusLabel {
-    if (payment?.status == 'paid') return 'Lunas';
-    if (payment?.status == 'pending' && payment?.paymentMethod == 'cashless') {
+    if (payment?.status == 'paid' && payment?.paymentMethod == 'cashless') {
       return 'Bayar di Tempat';
     }
+    if (payment?.status == 'paid') return 'Lunas';
     switch (payment?.status) {
       case 'pending':
         return 'Belum Dibayar';

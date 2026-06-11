@@ -27,7 +27,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late int _currentTab;
   Timer? _singleRefreshTimer;
-  int _pollIntervalSec = 60;
+  int _pollIntervalSec = 30;
 
   @override
   void initState() {
@@ -59,13 +59,13 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // Adaptive: 15s jika masih ada pending, 60s jika tidak
+    // Adaptive: 5s jika masih ada pending, 30s jika tidak
     if (!mounted) return;
     final hasPending = context
         .read<BookingProvider>()
         .bookings
         .any((b) => b.status == 'pending');
-    _pollIntervalSec = hasPending ? 15 : 60;
+    _pollIntervalSec = hasPending ? 5 : 30;
     _scheduleNextPoll();
   }
 
@@ -82,9 +82,9 @@ class _HomeScreenState extends State<HomeScreen> {
       context.read<BarberProvider>().fetchBarbers(),
     ]);
     if (!mounted) return;
-    // Jika ada pending booking, polling langsung 15s (tidak perlu nunggu 60s)
+    // Jika ada pending booking, polling langsung 5s (tidak perlu nunggu 30s)
     if (context.read<BookingProvider>().bookings.any((b) => b.status == 'pending')) {
-      _pollIntervalSec = 15;
+      _pollIntervalSec = 5;
     }
   }
 

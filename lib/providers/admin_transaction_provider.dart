@@ -70,18 +70,6 @@ class AdminTransactionProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> confirmCashPayment(int paymentId) async {
-    try {
-      await _api.confirmCashPayment(paymentId);
-      await fetchTransactions();
-      return true;
-    } catch (_) {
-      _error = 'Gagal mengonfirmasi pembayaran';
-      notifyListeners();
-      return false;
-    }
-  }
-
   void resetReport() {
     _showReport = false;
     _report = [];

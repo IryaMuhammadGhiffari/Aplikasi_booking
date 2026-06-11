@@ -46,7 +46,7 @@ class ReportExporter {
       case 'paid':
         return 'Dibayar';
       case 'pending':
-        return method == 'cashless' ? 'Tunggu Tunai' : 'Menunggu';
+        return 'Menunggu';
       case 'expired':
         return 'Kadaluarsa';
       case 'failed':

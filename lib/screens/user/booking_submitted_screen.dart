@@ -33,7 +33,7 @@ class _BookingSubmittedScreenState extends State<BookingSubmittedScreen> {
   }
 
   void _startPolling() {
-    _timer = Timer.periodic(const Duration(seconds: 15), (_) {
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
       context.read<BookingProvider>().fetchMyBookings();
     });
   }

@@ -183,7 +183,8 @@ class PaymentController extends Controller
                 'order_id'        => $orderId,
                 'amount'          => $booking->total_price,
                 'payment_method'  => 'cashless',
-                'status'          => 'pending',
+                'status'          => 'paid',
+                'paid_at'         => now(),
                 'snap_token'      => null,
                 'snap_url'        => null,
                 'transaction_id'  => null,
@@ -193,30 +194,8 @@ class PaymentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Kamu memilih bayar tunai di tempat. Tunjukkan kode booking saat datang.',
+            'message' => 'Pembayaran tunai berhasil. Tunjukkan kode booking saat datang.',
             'data'    => $payment,
-        ]);
-    }
-
-    public function confirmCashPayment(Request $request, $paymentId)
-    {
-        $payment = Payment::with('booking')->findOrFail($paymentId);
-
-        if ($payment->payment_method !== 'cashless' || $payment->status !== 'pending') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Hanya pembayaran cashless yang menunggu konfirmasi tunai.',
-            ], 422);
-        }
-
-        $payment->update([
-            'status'  => 'paid',
-            'paid_at' => now(),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Pembayaran tunai berhasil dikonfirmasi',
         ]);
     }
 

@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/booking_model.dart';
 import '../../providers/booking_provider.dart';
-import '../../services/api_service.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/transaction_helpers.dart';
 import '../../widgets/booking_status_badge.dart';
@@ -48,8 +47,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
   void _initData() {
     if (widget.args.isAdmin && widget.args.transaction != null) {
-      _data = TransactionDetailData.fromAdminTransaction(
-          widget.args.transaction!);
+      _data =
+          TransactionDetailData.fromAdminTransaction(widget.args.transaction!);
     } else if (widget.args.booking != null) {
       _booking = widget.args.booking;
       _data = TransactionDetailData.fromBooking(_booking!);
@@ -75,58 +74,6 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       }
     } catch (_) {}
     setState(() => _refreshing = false);
-  }
-
-  Future<void> _confirmCash() async {
-    if (_data.paymentId == null) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Konfirmasi Tunai',
-            style: GoogleFonts.poppins(
-                color: AppColors.white, fontWeight: FontWeight.bold)),
-        content: Text(
-          'Konfirmasi pembayaran tunai dari ${_data.customerName ?? 'pelanggan'} sudah diterima di kasir?',
-          style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Batal',
-                style: GoogleFonts.poppins(color: AppColors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-            child: const Text('Konfirmasi'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-
-    setState(() => _loadingAction = true);
-    try {
-      await ApiService().confirmCashPayment(_data.paymentId!);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Pembayaran tunai dikonfirmasi',
-            style: GoogleFonts.poppins(color: Colors.white)),
-        backgroundColor: AppColors.success,
-      ));
-      Navigator.pop(context, true);
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Gagal mengonfirmasi',
-            style: GoogleFonts.poppins(color: Colors.white)),
-        backgroundColor: AppColors.error,
-      ));
-    } finally {
-      if (mounted) setState(() => _loadingAction = false);
-    }
   }
 
   Future<void> _pay() async {
@@ -176,8 +123,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: const Text('Batalkan Booking?'),
-        content: const Text(
-            'Booking yang dibatalkan tidak dapat dikembalikan.'),
+        content:
+            const Text('Booking yang dibatalkan tidak dapat dikembalikan.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -260,10 +207,10 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                 if (_data.transactionId != null &&
                     _data.transactionId!.isNotEmpty)
                   _row('ID Transaksi', _data.transactionId!),
-                _row('Status Pembayaran', statusLabel,
-                    valueColor: statusColor),
+                _row('Status Pembayaran', statusLabel, valueColor: statusColor),
                 if (_data.paymentMethod != null)
-                  _row('Metode Pembayaran',
+                  _row(
+                      'Metode Pembayaran',
                       TransactionHelpers.formatPaymentMethod(
                           _data.paymentMethod)),
                 if (_data.paidAt != null)
@@ -291,7 +238,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                   'Status Booking',
                   TransactionHelpers.bookingStatusLabel(_data.bookingStatus),
                 ),
-                _row('Total Harga', TransactionHelpers.formatRp(_data.totalPrice),
+                _row('Total Harga',
+                    TransactionHelpers.formatRp(_data.totalPrice),
                     valueColor: AppColors.secondary, isBold: true),
                 if (_data.notes != null && _data.notes!.trim().isNotEmpty)
                   _notesBox(_data.notes!),
@@ -424,7 +372,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           Expanded(
             flex: 2,
             child: Text(label,
-                style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 12)),
+                style:
+                    GoogleFonts.poppins(color: AppColors.grey, fontSize: 12)),
           ),
           Expanded(
             flex: 3,
@@ -545,46 +494,16 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
   Widget _buildAdminActions() {
     final isCashless = _data.paymentMethod == 'cashless';
-    final canConfirm =
-        _data.paymentStatus == 'pending' && isCashless && _data.paymentId != null;
 
-    if (!canConfirm &&
-        !(_data.paymentStatus == 'pending' && !isCashless)) {
-      return const SizedBox();
-    }
+    // Cashless auto-paid sejak Juni 2026 — tidak perlu konfirmasi admin
+    if (isCashless) return const SizedBox();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (canConfirm)
-          ElevatedButton.icon(
-            onPressed: _loadingAction ? null : _confirmCash,
-            icon: _loadingAction
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.payments, color: Colors.white),
-            label: Text(
-              _loadingAction ? 'Memproses...' : 'Konfirmasi Tunai Diterima',
-              style: GoogleFonts.poppins(
-                  color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        if (_data.paymentStatus == 'pending' && !isCashless)
-          _infoBanner(
-            Icons.sync,
-            'Menunggu pembayaran online dari pelanggan.',
-            AppColors.warning,
-          ),
-      ],
+    if (_data.paymentStatus != 'pending') return const SizedBox();
+
+    return _infoBanner(
+      Icons.sync,
+      'Menunggu pembayaran online dari pelanggan.',
+      AppColors.warning,
     );
   }
 
