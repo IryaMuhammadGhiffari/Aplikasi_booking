@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../models/booking_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../providers/service_provider.dart';
@@ -265,6 +266,18 @@ class _HomeTabState extends State<_HomeTab> {
             ),
           ),
         ),
+
+        // ── Reminder booking hari ini ──
+        if (_hasTodayBooking(booking.bookings))
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: _TodayBookingBanner(
+                booking: _getTodayBooking(booking.bookings)!,
+                onTap: () => Navigator.pushNamed(context, AppRoutes.history, arguments: 1),
+              ),
+            ),
+          ),
 
         if (booking.bookingsReadyToPay.isNotEmpty)
           SliverToBoxAdapter(
@@ -569,6 +582,21 @@ class _HomeTabState extends State<_HomeTab> {
       ],
     ));
   }
+
+  // ── Helper: cek booking hari ini ──
+  bool _hasTodayBooking(List bookings) => _getTodayBooking(bookings) != null;
+
+  BookingModel? _getTodayBooking(List bookings) {
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    try {
+      return bookings.cast<BookingModel>().firstWhere((b) =>
+          (b.status == 'confirmed' || b.status == 'in_progress') &&
+          b.bookingDate.startsWith(todayStr));
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 class _PaymentReadyBanner extends StatelessWidget {
@@ -618,6 +646,64 @@ class _PaymentReadyBanner extends StatelessWidget {
           ),
           const Icon(Icons.arrow_forward_ios,
               color: AppColors.success, size: 14),
+        ]),
+      ),
+    );
+  }
+}
+
+class _TodayBookingBanner extends StatelessWidget {
+  final BookingModel booking;
+  final VoidCallback onTap;
+
+  const _TodayBookingBanner({required this.booking, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1A237E), Color(0xFF283593)],
+          ),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.calendar_today, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Booking Kamu Hari Ini!',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${booking.timeDisplay} — ${booking.barber?.name ?? '-'}',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white70,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.arrow_forward_ios, color: Colors.white38, size: 14),
         ]),
       ),
     );

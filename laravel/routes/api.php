@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\ServiceController;
 use App\Http\Controllers\API\BarberController;
@@ -60,6 +61,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('revenue-report',           [PaymentController::class, 'revenueReport']);
         // Route::patch('payments/{id}/confirm-cash'); // Dihapus — cashless auto-paid sejak Juni 2026
     });
+});
+
+// Cronjob: auto-cancel booking expired (panggil dari cronjob.com)
+Route::get('/cron/auto-cancel', function () {
+    Artisan::call('bookings:auto-cancel');
+    return response()->json([
+        'success' => true,
+        'message' => Artisan::output(),
+    ]);
 });
 
 // Fallback untuk redirect middleware Authenticate — mencegah error "Route [login] not defined"

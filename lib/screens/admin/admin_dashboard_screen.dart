@@ -55,8 +55,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               label: 'Booking'),
             const BottomNavigationBarItem(
               icon: Icon(Icons.design_services_outlined), activeIcon: Icon(Icons.design_services), label: 'Layanan'),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long_outlined), activeIcon: Icon(Icons.receipt_long), label: 'Transaksi'),
+            BottomNavigationBarItem(
+              icon: _TransaksiTabIcon(count: context.watch<AdminTransactionProvider>().todayPaymentCount),
+              activeIcon: _TransaksiTabIcon(count: context.watch<AdminTransactionProvider>().todayPaymentCount, active: true),
+              label: 'Transaksi'),
           ],
         ),
       ),
@@ -128,13 +130,61 @@ class _HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<_HomeTab> {
+  Timer? _pollTimer;
+  int _prevPaymentCount = 0;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AdminBookingProvider>().fetch();
-      context.read<AdminTransactionProvider>().fetchTransactions();
+      _initialFetch();
     });
+  }
+
+  Future<void> _initialFetch() async {
+    await Future.wait([
+      context.read<AdminBookingProvider>().fetch(),
+      context.read<AdminTransactionProvider>().fetchTransactions(),
+    ]);
+    if (!mounted) return;
+    _prevPaymentCount = context.read<AdminTransactionProvider>().todayPaymentCount;
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer(const Duration(seconds: 15), _pollTick);
+  }
+
+  Future<void> _pollTick() async {
+    if (!mounted) return;
+    await Future.wait([
+      context.read<AdminBookingProvider>().fetch(),
+      context.read<AdminTransactionProvider>().fetchTransactions(),
+    ]);
+    if (!mounted) return;
+
+    // Deteksi pembayaran baru
+    final current = context.read<AdminTransactionProvider>().todayPaymentCount;
+    if (current > _prevPaymentCount && _prevPaymentCount > 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Pembayaran baru masuk! (+${current - _prevPaymentCount})',
+              style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ));
+      }
+    }
+    _prevPaymentCount = current;
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _onRefresh() async {
@@ -142,6 +192,8 @@ class _HomeTabState extends State<_HomeTab> {
       context.read<AdminBookingProvider>().fetch(),
       context.read<AdminTransactionProvider>().fetchTransactions(),
     ]);
+    if (!mounted) return;
+    _prevPaymentCount = context.read<AdminTransactionProvider>().todayPaymentCount;
   }
 
   @override
@@ -250,7 +302,46 @@ class _HomeTabState extends State<_HomeTab> {
                         isCurrency: true),
                   ],
                 ),
-                const SizedBox(height: 28),
+                // ── Pembayaran baru hari ini ──
+                if (tp.todayPaymentCount > 0)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.payments, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${tp.todayPaymentCount} Pembayaran Baru',
+                                style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14)),
+                            Text(tp.todayPaymentTotal.toRupiah,
+                                style: GoogleFonts.poppins(
+                                    color: Colors.white70, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, color: Colors.white38, size: 14),
+                    ]),
+                  ),
 
                 Text('Aksi Cepat',
                     style: Theme.of(context).textTheme.headlineMedium),
@@ -346,6 +437,21 @@ class _BookingTabIcon extends StatelessWidget {
       isLabelVisible: count > 0,
       label: Text('$count', style: const TextStyle(fontSize: 10)),
       child: Icon(active ? Icons.calendar_month : Icons.calendar_month_outlined),
+    );
+  }
+}
+
+class _TransaksiTabIcon extends StatelessWidget {
+  final int count;
+  final bool active;
+  const _TransaksiTabIcon({required this.count, this.active = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Badge(
+      isLabelVisible: count > 0,
+      label: Text('$count', style: const TextStyle(fontSize: 10)),
+      child: Icon(active ? Icons.receipt_long : Icons.receipt_long_outlined),
     );
   }
 }

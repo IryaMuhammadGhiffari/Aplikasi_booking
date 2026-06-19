@@ -28,6 +28,27 @@ class AdminTransactionProvider with ChangeNotifier {
   bool get isLoadingReport => _isLoadingReport;
   DateTimeRange? get range => _range;
 
+  /// Pembayaran LUNAS hari ini (untuk notifikasi admin)
+  int get todayPaymentCount {
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    return _transactions.where((t) {
+      if (t['status'] != 'paid') return false;
+      final paidAt = t['paid_at'] as String?;
+      return paidAt != null && paidAt.startsWith(todayStr);
+    }).length;
+  }
+
+  double get todayPaymentTotal {
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    return _transactions.where((t) {
+      if (t['status'] != 'paid') return false;
+      final paidAt = t['paid_at'] as String?;
+      return paidAt != null && paidAt.startsWith(todayStr);
+    }).fold<double>(0, (sum, t) => sum + double.parse(t['amount'].toString()));
+  }
+
   Future<void> fetchTransactions() async {
     _error = null;
     _isLoading = true;
