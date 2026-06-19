@@ -29,7 +29,9 @@ class _AdminTransactionsScreenState extends State<AdminTransactionsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AdminTransactionProvider>().fetchTransactions();
+      context.read<AdminTransactionProvider>()
+        ..fetchTransactions()
+        ..markPaymentsSeen();
     });
   }
 
@@ -63,6 +65,31 @@ class _AdminTransactionsScreenState extends State<AdminTransactionsScreen>
     await provider.fetchRevenueReport(picked);
   }
 
+
+  /// Ambil tanggal display dari transaksi (paid_at > created_at > booking_date)
+  String _trxDateKey(Map t) {
+    final paidAt = t['paid_at'] as String?;
+    if (paidAt != null && paidAt.length >= 10) return paidAt.substring(0, 10);
+    final createdAt = t['created_at'] as String?;
+    if (createdAt != null && createdAt.length >= 10) return createdAt.substring(0, 10);
+    final booking = t['booking'] as Map?;
+    final bookingDate = booking?['booking_date'] as String?;
+    if (bookingDate != null && bookingDate.length >= 10) return bookingDate.substring(0, 10);
+    return DateTime.now().toIso8601String().substring(0, 10);
+  }
+
+  /// Group transaksi berdasarkan tanggal (urut dari terbaru)
+  Map<String, List<Map>> _groupedTransactions(List list) {
+    final map = <String, List<Map>>{};
+    for (final t in list) {
+      final key = _trxDateKey(t);
+      map.putIfAbsent(key, () => []).add(t);
+    }
+    // Urutkan descending berdasarkan key tanggal
+    final sorted = map.entries.toList()
+      ..sort((a, b) => b.key.compareTo(a.key));
+    return {for (final e in sorted) e.key: e.value};
+  }
 
   Future<void> _export(String type) async {
     final provider = context.read<AdminTransactionProvider>();
@@ -290,20 +317,26 @@ class _AdminTransactionsScreenState extends State<AdminTransactionsScreen>
                     ]),
                   ))
                 else
-                  ...provider.transactions.map((t) => _TrxCard(
-                        t: t,
-                        onTap: () async {
-                          final refreshed = await Navigator.pushNamed(
-                            context,
-                            AppRoutes.transactionDetail,
-                            arguments: TransactionDetailArgs(
-                              isAdmin: true,
-                              transaction: Map<String, dynamic>.from(t),
-                            ),
-                          );
-                          if (refreshed == true) _fetch();
-                        },
-                      )),
+                  ..._groupedTransactions(provider.transactions).entries
+                      .expand((entry) => [
+                            _DateHeader(dateStr: entry.key),
+                            ...entry.value.map((t) => _TrxCard(
+                                  t: t,
+                                  onTap: () async {
+                                    final refreshed =
+                                        await Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.transactionDetail,
+                                      arguments: TransactionDetailArgs(
+                                        isAdmin: true,
+                                        transaction:
+                                            Map<String, dynamic>.from(t),
+                                      ),
+                                    );
+                                    if (refreshed == true) _fetch();
+                                  },
+                                )),
+                          ]),
               ],
             ),
           );
@@ -432,6 +465,62 @@ class _AdminTransactionsScreenState extends State<AdminTransactionsScreen>
             ),
           ]),
         ],
+      ]),
+    );
+  }
+}
+
+/// Date separator header with Indonesian labels.
+class _DateHeader extends StatelessWidget {
+  final String dateStr; // YYYY-MM-DD
+  const _DateHeader({required this.dateStr});
+
+  static const _months = [
+    '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+  ];
+
+  String _label() {
+    final today = DateTime.now();
+    final todayStr = today.toIso8601String().substring(0, 10);
+    final yesterdayStr = today.subtract(const Duration(days: 1))
+        .toIso8601String().substring(0, 10);
+
+    if (dateStr == todayStr) return 'Hari Ini';
+    if (dateStr == yesterdayStr) return 'Kemarin';
+
+    // Format: "12 Juni 2026"
+    final parts = dateStr.split('-');
+    if (parts.length == 3) {
+      final day = int.tryParse(parts[2]) ?? 0;
+      final month = int.tryParse(parts[1]) ?? 0;
+      final year = parts[0];
+      if (month >= 1 && month <= 12) {
+        return '$day ${_months[month]} $year';
+      }
+    }
+    return dateStr;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
+      child: Row(children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.secondary.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(_label(),
+              style: GoogleFonts.poppins(
+                  color: AppColors.secondary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Divider(color: AppColors.divider.withOpacity(0.4))),
       ]),
     );
   }

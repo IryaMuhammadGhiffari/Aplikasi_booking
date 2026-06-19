@@ -259,7 +259,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (success) {
       await context.read<BookingProvider>().fetchMyBookings();
       if (!mounted) return;
-      setState(() => _showSuccess = true);
+      // Langsung balik ke home — user belum bayar, hanya booking dikonfirmasi
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            'Booking dikonfirmasi. Bayar tunai saat datang ke barbershop.',
+            style: GoogleFonts.poppins(color: Colors.white),
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ));
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.home,
+          (_) => false,
+          arguments: 2,
+        );
+      }
+      return;
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(context.read<BookingProvider>().error ?? 'Gagal'),

@@ -13,6 +13,17 @@ class AdminTransactionProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  int _seenPaymentCount = 0;
+
+  /// Ada pembayaran baru yang belum dilihat admin?
+  bool get hasNewPayments => todayPaymentCount > _seenPaymentCount;
+
+  /// Tandai pembayaran hari ini sudah dilihat admin
+  void markPaymentsSeen() {
+    _seenPaymentCount = todayPaymentCount;
+    notifyListeners();
+  }
+
   List _report = [];
   double _totalRevenue = 0;
   bool _showReport = false;

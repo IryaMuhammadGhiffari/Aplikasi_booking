@@ -194,7 +194,7 @@ class PaymentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Pembayaran tunai berhasil. Tunjukkan kode booking saat datang.',
+            'message' => 'Booking dikonfirmasi. Bayar tunai saat datang ke barbershop.',
             'data'    => $payment,
         ]);
     }

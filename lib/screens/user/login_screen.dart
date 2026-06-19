@@ -9,6 +9,7 @@ import '../../providers/admin_booking_provider.dart';
 import '../../providers/admin_transaction_provider.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_routes.dart';
+import '../../utils/saved_accounts.dart';
 import '../../widgets/gold_button.dart';
 import '../../widgets/custom_text_field.dart';
 
@@ -22,12 +23,29 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _passwordFocus = FocusNode();
   bool _obscure = true;
+  List<SavedAccount> _savedAccounts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedAccounts();
+  }
+
+  Future<void> _loadSavedAccounts() async {
+    try {
+      final accounts = await SavedAccounts.load();
+      if (!mounted) return;
+      setState(() => _savedAccounts = accounts);
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -43,7 +61,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
+      // Simpan akun untuk login cepat berikutnya
+      final user = auth.user;
+      if (user != null) {
+        await SavedAccounts.save(user.email, user.name);
+      }
       _prefetchData(); // fire & forget — data siap ketika screen terbuka
+      if (!mounted) return;
       Navigator.pushReplacementNamed(
         context,
         auth.isAdmin ? AppRoutes.adminDashboard : AppRoutes.home,
@@ -68,6 +92,135 @@ class _LoginScreenState extends State<LoginScreen> {
       context.read<ServiceProvider>().fetchServices();
       context.read<BarberProvider>().fetchBarbers();
     }
+  }
+
+  Widget _buildSavedAccounts(List<SavedAccount> accounts) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Akun Tersimpan',
+            style: GoogleFonts.poppins(
+                color: AppColors.lightGrey,
+                fontSize: 12,
+                fontWeight: FontWeight.w500)),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 56,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: accounts.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (_, i) {
+              final acc = accounts[i];
+              final initial = acc.name.isNotEmpty
+                  ? acc.name[0].toUpperCase()
+                  : acc.email[0].toUpperCase();
+              return GestureDetector(
+                onTap: () {
+                  _emailCtrl.text = acc.email;
+                  // Fokus ke password
+                  _passwordFocus.requestFocus();
+                  setState(() {});
+                },
+                onLongPress: () async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      backgroundColor: AppColors.surface,
+                      title: Text('Hapus akun?',
+                          style: GoogleFonts.poppins(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15)),
+                      content: Text(
+                        'Hapus ${acc.email} dari daftar?',
+                        style: GoogleFonts.poppins(
+                            color: AppColors.grey, fontSize: 13),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: Text('Batal',
+                              style:
+                                  GoogleFonts.poppins(color: AppColors.grey)),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: Text('Hapus',
+                              style:
+                                  GoogleFonts.poppins(color: AppColors.error)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (ok == true) {
+                    await SavedAccounts.remove(acc.email);
+                    await _loadSavedAccounts();
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.divider),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor:
+                            AppColors.secondary.withOpacity(0.2),
+                        child: Text(initial,
+                            style: GoogleFonts.poppins(
+                                color: AppColors.secondary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14)),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 100),
+                            child: Text(acc.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                    color: AppColors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500)),
+                          ),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 100),
+                            child: Text(acc.email,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                    color: AppColors.grey, fontSize: 10)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 4),
+                      if (_emailCtrl.text == acc.email)
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.check,
+                              color: AppColors.secondary, size: 12),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -125,7 +278,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               fontSize: 12,
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          // ── Akun tersimpan ──
+                          if (_savedAccounts.isNotEmpty) ...[
+                            _buildSavedAccounts(_savedAccounts),
+                            const SizedBox(height: 24),
+                          ],
                           Text(
                             'Email',
                             style: GoogleFonts.poppins(
