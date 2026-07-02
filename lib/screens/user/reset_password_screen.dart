@@ -42,8 +42,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Password berhasil direset'),
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Password berhasil direset'),
         backgroundColor: AppColors.success,
       ));
       Navigator.pushNamedAndRemoveUntil(

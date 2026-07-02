@@ -67,8 +67,8 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
     if (success) {
       _startCooldown();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Kode OTP baru telah dikirim'),
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Kode OTP baru telah dikirim'),
         backgroundColor: AppColors.success,
       ));
     } else {
