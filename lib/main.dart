@@ -84,8 +84,12 @@ class ArfanBarbershopApp extends StatelessWidget {
             case AppRoutes.forgotPassword:
               return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
             case AppRoutes.verifyOtp:
-              final email = settings.arguments as String;
-              return MaterialPageRoute(builder: (_) => VerifyOtpScreen(email: email));
+              final args = settings.arguments;
+              if (args is String) {
+                return MaterialPageRoute(builder: (_) => VerifyOtpScreen(email: args));
+              }
+              final data = args as Map<String, String>;
+              return MaterialPageRoute(builder: (_) => VerifyOtpScreen(email: data['email']!, debugOtp: data['otp']));
             case AppRoutes.resetPassword:
               final args = settings.arguments as Map<String, String>;
               return MaterialPageRoute(builder: (_) => ResetPasswordScreen(email: args['email']!, otp: args['otp']!));

@@ -9,7 +9,8 @@ import '../../widgets/custom_text_field.dart';
 
 class VerifyOtpScreen extends StatefulWidget {
   final String email;
-  const VerifyOtpScreen({super.key, required this.email});
+  final String? debugOtp; // HAPUS setelah WA berhasil
+  const VerifyOtpScreen({super.key, required this.email, this.debugOtp});
   @override
   State<VerifyOtpScreen> createState() => _VerifyOtpScreenState();
 }
@@ -22,6 +23,10 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   @override
   void initState() {
     super.initState();
+    // Auto-fill OTP debug — HAPUS setelah WA berhasil
+    if (widget.debugOtp != null) {
+      _otpCtrl.text = widget.debugOtp!;
+    }
     _startCooldown();
   }
 
@@ -65,7 +70,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
     if (!mounted) return;
 
-    if (success) {
+    if (success != null) {
       _startCooldown();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Kode OTP baru telah dikirim'),
@@ -109,6 +114,26 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                 const SizedBox(height: 6),
                 Text('Masukkan 6 digit kode OTP yang dikirim ke WhatsApp',
                     style: Theme.of(context).textTheme.bodyLarge),
+                // HAPUS box debug ini setelah WA berhasil
+                if (widget.debugOtp != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.bug_report, color: AppColors.success, size: 18),
+                      const SizedBox(width: 8),
+                      Text('DEBUG OTP: ${widget.debugOtp}',
+                          style: GoogleFonts.poppins(
+                              color: AppColors.success,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18)),
+                    ]),
+                  ),
+                ],
                 const SizedBox(height: 32),
 
                 Text('Kode OTP', style: GoogleFonts.poppins(color: AppColors.lightGrey, fontSize: 13)),

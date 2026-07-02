@@ -32,16 +32,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (!mounted) return;
 
     if (otp != null) {
-      // Debug: tunjukkin OTP — HAPUS snackbar ini setelah WA berhasil
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('OTP: $otp'),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 10),
-      ));
       Navigator.pushNamed(
         context,
         AppRoutes.verifyOtp,
-        arguments: _emailCtrl.text.trim(),
+        arguments: {'email': _emailCtrl.text.trim(), 'otp': otp},
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
