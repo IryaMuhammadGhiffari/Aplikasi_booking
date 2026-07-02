@@ -28,10 +28,9 @@ class FonnteService
         try {
             $response = Http::withHeaders([
                 'Authorization' => $this->apiToken,
-            ])->post("{$this->baseUrl}/send", [
+            ])->asMultipart()->post("{$this->baseUrl}/send", [
                 'target' => $this->formatPhoneNumber($target),
                 'message' => $message,
-                'countryCode' => '62', // Indonesia
             ]);
 
             $data = $response->json();
