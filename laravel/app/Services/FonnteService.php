@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 
 class FonnteService
 {
-    protected string $apiToken;
+    protected ?string $apiToken = null;
     protected string $baseUrl = 'https://api.fonnte.com';
 
     public function __construct()
