@@ -27,11 +27,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final auth = context.read<AuthProvider>();
-    final success = await auth.forgotPassword(_emailCtrl.text.trim());
+    final otp = await auth.forgotPassword(_emailCtrl.text.trim());
 
     if (!mounted) return;
 
-    if (success) {
+    if (otp != null) {
+      // Debug: tunjukkin OTP — HAPUS snackbar ini setelah WA berhasil
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('OTP: $otp'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 10),
+      ));
       Navigator.pushNamed(
         context,
         AppRoutes.verifyOtp,

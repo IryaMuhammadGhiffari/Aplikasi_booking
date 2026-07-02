@@ -137,15 +137,17 @@ class AuthProvider with ChangeNotifier {
   }
 
   /// Forgot password — send OTP via WA
-  Future<bool> forgotPassword(String email) async {
+  /// Returns OTP string on success (debug), null on failure
+  Future<String?> forgotPassword(String email) async {
     _setLoading(true);
     _setError(null);
     try {
-      await _api.forgotPassword(email);
-      return true;
+      final res = await _api.forgotPassword(email);
+      final otp = res.data['debug_otp'] as String?; // HAPUS setelah WA berhasil
+      return otp;
     } catch (e) {
       _setError(_parseError(e));
-      return false;
+      return null;
     } finally {
       _setLoading(false);
     }
