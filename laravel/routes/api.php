@@ -11,6 +11,11 @@ use App\Http\Controllers\API\PaymentController;
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login',    [AuthController::class, 'login']);
+
+    // Password Reset (Public)
+    Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('verify-otp',      [AuthController::class, 'verifyOtp']);
+    Route::post('reset-password',  [AuthController::class, 'resetPassword']);
 });
 
 Route::post('payments/notification', [PaymentController::class, 'notification']);

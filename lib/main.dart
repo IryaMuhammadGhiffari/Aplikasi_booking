@@ -18,6 +18,9 @@ import 'widgets/connectivity_banner.dart';
 import 'screens/splash_screen.dart';
 import 'screens/user/login_screen.dart';
 import 'screens/user/register_screen.dart';
+import 'screens/user/forgot_password_screen.dart';
+import 'screens/user/verify_otp_screen.dart';
+import 'screens/user/reset_password_screen.dart';
 import 'screens/user/home_screen.dart';
 import 'screens/user/services_screen.dart';
 import 'screens/user/barbers_screen.dart';
@@ -78,6 +81,14 @@ class ArfanBarbershopApp extends StatelessWidget {
               return MaterialPageRoute(builder: (_) => const LoginScreen());
             case AppRoutes.register:
               return MaterialPageRoute(builder: (_) => const RegisterScreen());
+            case AppRoutes.forgotPassword:
+              return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
+            case AppRoutes.verifyOtp:
+              final email = settings.arguments as String;
+              return MaterialPageRoute(builder: (_) => VerifyOtpScreen(email: email));
+            case AppRoutes.resetPassword:
+              final args = settings.arguments as Map<String, String>;
+              return MaterialPageRoute(builder: (_) => ResetPasswordScreen(email: args['email']!, otp: args['otp']!));
             case AppRoutes.home:
               final tab = settings.arguments is int ? settings.arguments as int : 0;
               return MaterialPageRoute(builder: (_) => HomeScreen(initialTab: tab));

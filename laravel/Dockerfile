@@ -55,5 +55,5 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 # Expose port
 EXPOSE 80
 
-# Start Apache langsung — migrasi jalan via Render Dashboard manual
-CMD ["apache2-foreground"]
+# Jalankan migration dulu, baru start Apache
+CMD ["sh", "-c", "php artisan migrate --force --isolated && php artisan optimize:clear && apache2-foreground"]

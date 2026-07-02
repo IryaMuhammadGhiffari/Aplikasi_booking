@@ -50,6 +50,17 @@ class ApiService {
   Future<Response> getProfile() => _dio.get('/auth/profile');
   Future<Response> updateProfile(Map<String, dynamic> data) =>
       _dio.put('/auth/profile', data: data);
+  Future<Response> forgotPassword(String email) =>
+      _dio.post('/auth/forgot-password', data: {'email': email});
+  Future<Response> verifyOtp(String email, String otp) =>
+      _dio.post('/auth/verify-otp', data: {'email': email, 'otp': otp});
+  Future<Response> resetPassword(String email, String otp, String password) =>
+      _dio.post('/auth/reset-password', data: {
+        'email': email,
+        'otp': otp,
+        'password': password,
+        'password_confirmation': password,
+      });
 
   // SERVICES
   Future<Response> getServices() => _dio.get('/services');

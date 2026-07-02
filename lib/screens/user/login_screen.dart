@@ -350,13 +350,20 @@ class _LoginScreenState extends State<LoginScreen> {
                               label: 'MASUK',
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
+                          const SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: () => Navigator.pushNamed(context, AppRoutes.forgotPassword),
+                            child: Text(
+                              'Lupa Password?',
+                              style: GoogleFonts.poppins(
+                                color: AppColors.secondary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
@@ -381,6 +388,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 32),
+                        ],  // children Column #2
+                      ),    // Column #2
+                    ),      // Form
+                  ),        // Container
+                ),          // Padding
               ],
             ),
           ),

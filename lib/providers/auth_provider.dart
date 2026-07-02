@@ -136,6 +136,51 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Forgot password — send OTP via WA
+  Future<bool> forgotPassword(String email) async {
+    _setLoading(true);
+    _setError(null);
+    try {
+      await _api.forgotPassword(email);
+      return true;
+    } catch (e) {
+      _setError(_parseError(e));
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Verify OTP
+  Future<bool> verifyOtp(String email, String otp) async {
+    _setLoading(true);
+    _setError(null);
+    try {
+      await _api.verifyOtp(email, otp);
+      return true;
+    } catch (e) {
+      _setError(_parseError(e));
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Reset password
+  Future<bool> resetPassword(String email, String otp, String password) async {
+    _setLoading(true);
+    _setError(null);
+    try {
+      await _api.resetPassword(email, otp, password);
+      return true;
+    } catch (e) {
+      _setError(_parseError(e));
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<void> _saveSession(String token, Map<String, dynamic> userData) async {
     await _storage.write(key: AppConstants.tokenKey, value: token);
     _user = UserModel.fromJson(userData);

@@ -321,26 +321,20 @@ class _HomeTabState extends State<_HomeTab> {
                   final confirmed = bp.bookings
                       .where((b) => b['status'] == 'confirmed')
                       .length;
-                  final totalRevenue = tp.transactions
-                      .where((t) => t['status'] == 'paid')
-                      .fold<double>(
-                          0,
-                          (sum, t) =>
-                              sum + double.parse(t['amount'].toString()));
 
                   return Column(children: [
                     Text('Ringkasan',
                         style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: 14),
 
-                    // Stats grid 2x2
+                    // Stats grid 3 kolom
                     GridView.count(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
+                      crossAxisCount: 3,
                       mainAxisSpacing: 10,
                       crossAxisSpacing: 10,
-                      childAspectRatio: 1.55,
+                      childAspectRatio: 1.3,
                       children: [
                         _StatCard(
                             icon: Icons.calendar_today,
@@ -357,13 +351,6 @@ class _HomeTabState extends State<_HomeTab> {
                             label: 'Dikonfirmasi',
                             value: confirmed,
                             color: AppColors.success),
-                        _StatCard(
-                            icon: Icons.monetization_on_outlined,
-                            label: 'Pendapatan',
-                            value: totalRevenue,
-                            color: AppColors.secondary,
-                            smallText: true,
-                            isCurrency: true),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -459,15 +446,11 @@ class _StatCard extends StatelessWidget {
   final String label;
   final num value;
   final Color color;
-  final bool smallText;
-  final bool isCurrency;
   const _StatCard({
     required this.icon,
     required this.label,
     required this.value,
     required this.color,
-    this.smallText = false,
-    this.isCurrency = false,
   });
 
   @override
@@ -494,11 +477,10 @@ class _StatCard extends StatelessWidget {
           duration: const Duration(milliseconds: 700),
           curve: Curves.easeOutCubic,
           builder: (_, val, __) {
-            final display = isCurrency ? val.toRupiah : val.toInt().toString();
-            return Text(display,
+            return Text(val.toInt().toString(),
                 style: GoogleFonts.poppins(
                     color: color,
-                    fontSize: smallText ? 14 : 22,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold));
           },
         ),

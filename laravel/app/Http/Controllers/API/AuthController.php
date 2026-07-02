@@ -4,12 +4,22 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\FonnteService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    protected FonnteService $fonnte;
+
+    public function __construct(FonnteService $fonnte)
+    {
+        $this->fonnte = $fonnte;
+    }
     /**
      * REGISTER - Daftar user baru
      */
@@ -102,22 +112,134 @@ class AuthController extends Controller
     }
 
     /**
-     * UPDATE PROFILE - Edit nama dan nomor HP
+     * FORGOT PASSWORD - Kirim OTP via WhatsApp
      */
-    public function updateProfile(Request $request)
+    public function forgotPassword(Request $request)
     {
         $request->validate([
-            'name'  => 'sometimes|string|max:255',
-            'phone' => 'sometimes|string|max:20',
+            'email' => 'required|email|exists:users,email',
         ]);
 
-        $user = $request->user();
-        $user->update($request->only(['name', 'phone']));
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user->phone) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nomor telepon tidak terdaftar. Hubungi admin.',
+            ], 422);
+        }
+
+        // Generate 6-digit OTP
+        $otp = (string) random_int(100000, 999999);
+
+        // Simpan OTP ke database (password_reset_tokens)
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            [
+                'token' => $otp,
+                'created_at' => now(),
+            ]
+        );
+
+        // Kirim OTP via WhatsApp
+        $result = $this->fonnte->sendOtp($user->phone, $otp);
+
+        if (!$result['success']) {
+            Log::error('Gagal kirim OTP WA', ['user_id' => $user->id, 'error' => $result['message']]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengirim OTP via WhatsApp. Coba lagi nanti.',
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Profil berhasil diperbarui',
-            'data'    => $user->fresh(),
+            'message' => 'Kode OTP telah dikirim ke WhatsApp Anda.',
+        ]);
+    }
+
+    /**
+     * VERIFY OTP - Cek kode OTP
+     */
+    public function verifyOtp(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+            'otp'   => 'required|string|size:6',
+        ]);
+
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->where('token', $request->otp)
+            ->first();
+
+        if (!$record) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode OTP salah atau sudah kadaluarsa.',
+            ], 422);
+        }
+
+        // Cek kadaluarsa (10 menit)
+        if ($record->created_at->diffInMinutes(now()) > 10) {
+            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode OTP sudah kadaluarsa. Minta kode baru.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kode OTP valid.',
+        ]);
+    }
+
+    /**
+     * RESET PASSWORD - Ganti password baru
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email'                 => 'required|email|exists:users,email',
+            'otp'                   => 'required|string|size:6',
+            'password'              => 'required|min:6|confirmed',
+        ]);
+
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->where('token', $request->otp)
+            ->first();
+
+        if (!$record) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode OTP salah atau sudah kadaluarsa.',
+            ], 422);
+        }
+
+        if ($record->created_at->diffInMinutes(now()) > 10) {
+            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode OTP sudah kadaluarsa. Minta kode baru.',
+            ], 422);
+        }
+
+        // Update password
+        $user = User::where('email', $request->email)->first();
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        // Hapus token
+        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        // Revoke semua token lama
+        $user->tokens()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password berhasil direset. Silakan login dengan password baru.',
         ]);
     }
 }

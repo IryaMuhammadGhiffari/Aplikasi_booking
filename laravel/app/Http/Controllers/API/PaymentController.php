@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Payment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Midtrans\Config;
 use Midtrans\Snap;
 use Midtrans\Notification;
@@ -103,7 +104,7 @@ class PaymentController extends Controller
             $snapToken = Snap::getSnapToken($params);
             $snapUrl   = 'https://app.sandbox.midtrans.com/snap/v2/vtweb/' . $snapToken;
         } catch (\Exception $e) {
-            \Log::warning('Midtrans createTransaction error: ' . $e->getMessage());
+            Log::warning('Midtrans createTransaction error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal terhubung ke server pembayaran. Silakan coba lagi.',
