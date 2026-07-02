@@ -11,3 +11,10 @@
 
 # Keep shared_preferences
 -keep class com.example.** { *; }
+
+# Play Core (split compat / deferred components) — optional, needed for Play Store
+-dontwarn com.google.android.play.core.**
+-keep class com.google.android.play.core.** { *; }
+
+# error_prone_annotations — referenced by lint annotations
+-dontwarn javax.lang.model.element.Modifier
