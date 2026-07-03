@@ -5,9 +5,11 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    // PostgreSQL: ALTER TYPE ... ADD VALUE tidak boleh di dalam transaksi
+    protected $withinTransaction = false;
+
     public function up(): void
     {
-        // PostgreSQL: tambah value ke enum
         DB::statement("ALTER TYPE payments_status ADD VALUE 'refund_pending'");
     }
 
