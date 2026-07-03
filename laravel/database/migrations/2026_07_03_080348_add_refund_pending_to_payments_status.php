@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration
 {
     // PostgreSQL: ALTER TYPE ... ADD VALUE tidak boleh di dalam transaksi
-    protected $withinTransaction = false;
+    public $withinTransaction = false;
 
     public function up(): void
     {
