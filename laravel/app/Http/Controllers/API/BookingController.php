@@ -143,6 +143,12 @@ class BookingController extends Controller
         //     ], 422);
         // }
 
+        // Sync payment status dari Midtrans dulu (kalau bukan cashless)
+        if ($booking->payment && $booking->payment->payment_method !== 'cashless') {
+            $this->syncPaymentFromMidtrans($booking->payment);
+            $booking->payment->refresh();
+        }
+
         $booking->update(['status' => 'cancelled']);
 
         if ($booking->payment) {
@@ -322,5 +328,59 @@ class BookingController extends Controller
             'message' => 'Status booking berhasil diperbarui',
             'data'    => $booking->fresh(['payment' => fn ($q) => $q->select('id', 'booking_id', 'order_id', 'amount', 'status', 'payment_method', 'paid_at')]),
         ]);
+    }
+
+    private function syncPaymentFromMidtrans($payment): void
+    {
+        if (!$payment->order_id || $payment->payment_method === 'cashless') {
+            return;
+        }
+
+        try {
+            $midtrans = Transaction::status($payment->order_id);
+        } catch (\Exception) {
+            return;
+        }
+
+        if (is_array($midtrans)) {
+            $midtrans = (object) $midtrans;
+        }
+
+        $this->applyMidtransUpdate($payment, [
+            'transaction_status' => $midtrans->transaction_status,
+            'fraud_status'       => $midtrans->fraud_status ?? null,
+            'payment_type'       => $midtrans->payment_type ?? null,
+            'transaction_id'     => $midtrans->transaction_id ?? null,
+        ], (array) $midtrans);
+    }
+
+    private function applyMidtransUpdate($payment, array $midtrans, ?array $rawResponse = null): void
+    {
+        $paymentStatus = $this->mapMidtransStatus(
+            $midtrans['transaction_status'],
+            $midtrans['fraud_status'] ?? null
+        );
+
+        $payment->update([
+            'transaction_id'    => $midtrans['transaction_id'] ?? $payment->transaction_id,
+            'payment_method'    => $midtrans['payment_type'] ?? $payment->payment_method,
+            'status'            => $paymentStatus,
+            'midtrans_response' => $rawResponse ?? $payment->midtrans_response,
+            'paid_at'           => $paymentStatus === 'paid' ? ($payment->paid_at ?? now()) : null,
+        ]);
+    }
+
+    private function mapMidtransStatus(string $transactionStatus, ?string $fraudStatus): string
+    {
+        if ($transactionStatus === 'capture') {
+            return $fraudStatus === 'challenge' ? 'pending' : 'paid';
+        }
+        if ($transactionStatus === 'settlement') {
+            return 'paid';
+        }
+        if (in_array($transactionStatus, ['pending', 'authorize'])) {
+            return 'pending';
+        }
+        return 'failed';
     }
 }
