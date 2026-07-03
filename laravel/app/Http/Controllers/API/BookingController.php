@@ -132,7 +132,7 @@ class BookingController extends Controller
         }
 
         // Minimal 6 jam sebelum jadwal
-        $bookingDateTime = \Carbon\Carbon::parse($booking->booking_date . ' ' . $booking->booking_time);
+        $bookingDateTime = \Carbon\Carbon::parse($booking->booking_date->format('Y-m-d') . ' ' . $booking->booking_time);
         if ($bookingDateTime->diffInHours(now()) < 6) {
             return response()->json([
                 'success' => false,
