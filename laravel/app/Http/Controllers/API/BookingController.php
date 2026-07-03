@@ -131,17 +131,17 @@ class BookingController extends Controller
             ], 422);
         }
 
-        // Minimal 6 jam sebelum jadwal
-        $bookingDateStr = $booking->booking_date->format('Y-m-d');
-        $bookingTimeStr = $booking->booking_time;
-        $bookingDateTime = \Carbon\Carbon::parse($bookingDateStr . ' ' . $bookingTimeStr);
-        $hoursDiff = $bookingDateTime->diffInHours(now());
-        if ($hoursDiff < 6) {
-            return response()->json([
-                'success' => false,
-                'message' => "Booking tidak bisa dibatalkan. Jadwal: {$bookingDateStr} {$bookingTimeStr}, sekarang: " . now()->format('Y-m-d H:i:s') . ", selisih: {$hoursDiff} jam.",
-            ], 422);
-        }
+        // Minimal 6 jam sebelum jadwal — DISABLED sementara karena server clock Render off by ~1 tahun
+        // $bookingDateStr = $booking->booking_date->format('Y-m-d');
+        // $bookingTimeStr = $booking->booking_time;
+        // $bookingDateTime = \Carbon\Carbon::parse($bookingDateStr . ' ' . $bookingTimeStr);
+        // $hoursDiff = $bookingDateTime->diffInHours(now());
+        // if ($hoursDiff < 6) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => "Booking tidak bisa dibatalkan. Jadwal: {$bookingDateStr} {$bookingTimeStr}, sekarang: " . now()->format('Y-m-d H:i:s') . ", selisih: {$hoursDiff} jam.",
+        //     ], 422);
+        // }
 
         $booking->update(['status' => 'cancelled']);
 
