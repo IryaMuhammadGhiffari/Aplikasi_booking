@@ -123,8 +123,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: const Text('Batalkan Booking?'),
-        content:
-            const Text('Booking yang dibatalkan tidak dapat dikembalikan.'),
+        content: Text(_booking!.isPaid
+            ? 'Booking sudah dibayar. Dana akan dikembalikan (refund). Lanjutkan?'
+            : 'Booking yang dibatalkan tidak dapat dikembalikan.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -146,7 +147,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(success
-          ? 'Booking berhasil dibatalkan'
+          ? (_booking?.isPaid == true
+              ? 'Booking dibatalkan. Dana akan dikembalikan.'
+              : 'Booking berhasil dibatalkan')
           : provider.error ?? 'Gagal membatalkan'),
       backgroundColor: success ? AppColors.success : AppColors.error,
     ));

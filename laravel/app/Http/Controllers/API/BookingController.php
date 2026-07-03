@@ -7,6 +7,8 @@ use App\Models\Booking;
 use App\Models\BarberUnavailability;
 use App\Models\Service;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Midtrans\Transaction;
 
 class BookingController extends Controller
 {
@@ -129,20 +131,34 @@ class BookingController extends Controller
             ], 422);
         }
 
-        if ($booking->status === 'confirmed' && $booking->payment?->status === 'paid') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Booking sudah dibayar. Hubungi admin untuk pembatalan.',
-            ], 422);
-        }
-
         $booking->update(['status' => 'cancelled']);
 
-        if ($booking->payment && $booking->payment->status === 'pending') {
-            $booking->payment->update(['status' => 'failed']);
+        if ($booking->payment) {
+            if ($booking->payment->status === 'pending') {
+                $booking->payment->update(['status' => 'failed']);
+            } elseif ($booking->payment->status === 'paid') {
+                // Coba void Midtrans — refund otomatis kalau transaksi belum settle
+                if ($booking->payment->order_id) {
+                    try {
+                        Transaction::cancel($booking->payment->order_id);
+                    } catch (\Exception $e) {
+                        Log::warning('Midtrans void failed saat cancel booking', [
+                            'booking_id' => $booking->id,
+                            'order_id'   => $booking->payment->order_id,
+                            'error'      => $e->getMessage(),
+                        ]);
+                    }
+                }
+                $booking->payment->update(['status' => 'refunded']);
+            }
         }
 
-        return response()->json(['success' => true, 'message' => 'Booking berhasil dibatalkan']);
+        $message = 'Booking berhasil dibatalkan.';
+        if ($booking->payment?->status === 'refunded') {
+            $message = 'Booking dibatalkan. Dana akan dikembalikan. Hubungi admin jika refund belum diterima dalam 1x24 jam.';
+        }
+
+        return response()->json(['success' => true, 'message' => $message]);
     }
 
     public function reschedule(Request $request, $id)
@@ -254,7 +270,20 @@ class BookingController extends Controller
 
         if ($request->status === 'cancelled') {
             if ($booking->payment && in_array($booking->payment->status, ['pending', 'paid'])) {
-                $booking->payment->update(['status' => 'failed']);
+                if ($booking->payment->status === 'paid' && $booking->payment->order_id) {
+                    try {
+                        Transaction::cancel($booking->payment->order_id);
+                    } catch (\Exception $e) {
+                        Log::warning('Midtrans void failed saat admin cancel', [
+                            'booking_id' => $booking->id,
+                            'order_id'   => $booking->payment->order_id,
+                            'error'      => $e->getMessage(),
+                        ]);
+                    }
+                    $booking->payment->update(['status' => 'refunded']);
+                } else {
+                    $booking->payment->update(['status' => 'failed']);
+                }
             }
         }
 

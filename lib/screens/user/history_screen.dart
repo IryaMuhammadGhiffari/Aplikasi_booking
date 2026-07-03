@@ -367,13 +367,15 @@ class _HistoryCardState extends State<_HistoryCard> {
   }
 
   Future<void> _cancel() async {
+    final isPaid = widget.booking.isPaid;
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: const Text('Batalkan Booking?'),
-        content: const Text(
-            'Booking yang dibatalkan tidak dapat dikembalikan.'),
+        content: Text(isPaid
+            ? 'Booking sudah dibayar. Dana akan dikembalikan (refund). Lanjutkan?'
+            : 'Booking yang dibatalkan tidak dapat dikembalikan.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -396,7 +398,9 @@ class _HistoryCardState extends State<_HistoryCard> {
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(success
-          ? 'Booking berhasil dibatalkan'
+          ? (widget.booking.isPaid
+              ? 'Booking dibatalkan. Dana akan dikembalikan.'
+              : 'Booking berhasil dibatalkan')
           : provider.error ?? 'Gagal membatalkan'),
       backgroundColor: success ? AppColors.success : AppColors.error,
       behavior: SnackBarBehavior.floating,

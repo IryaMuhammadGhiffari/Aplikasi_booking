@@ -146,8 +146,9 @@ class BookingModel {
   bool get canReschedule =>
       (status == 'pending' || status == 'confirmed') && !isPaid;
 
+  /// Cancel: paid booking juga boleh — nanti refund
   bool get canCancel =>
-      (status == 'pending' || status == 'confirmed') && !isPaid;
+      status == 'pending' || status == 'confirmed';
 
   bool get isAwaitingAdmin => status == 'pending';
 }
