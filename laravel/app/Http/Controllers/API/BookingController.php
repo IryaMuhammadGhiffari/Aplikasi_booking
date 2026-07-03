@@ -149,19 +149,31 @@ class BookingController extends Controller
             if ($booking->payment->status === 'pending') {
                 $booking->payment->update(['status' => 'failed']);
             } elseif ($booking->payment->status === 'paid') {
-                // Coba void Midtrans — refund otomatis kalau transaksi belum settle
+                $refunded = false;
                 if ($booking->payment->order_id) {
                     try {
+                        // 1. Coba void dulu (untuk transaksi pending/belum settle)
                         Transaction::cancel($booking->payment->order_id);
+                        $refunded = true;
                     } catch (\Exception $e) {
-                        Log::warning('Midtrans void failed saat cancel booking', [
-                            'booking_id' => $booking->id,
-                            'order_id'   => $booking->payment->order_id,
-                            'error'      => $e->getMessage(),
-                        ]);
+                        // 2. Kalau void gagal (sudah settle), coba refund
+                        try {
+                            $refund = Transaction::refund($booking->payment->order_id);
+                            if (isset($refund->status_code) && $refund->status_code === '200') {
+                                $refunded = true;
+                            }
+                        } catch (\Exception $e2) {
+                            Log::error('Midtrans refund failed', [
+                                'booking_id' => $booking->id,
+                                'order_id'   => $booking->payment->order_id,
+                                'error'      => $e2->getMessage(),
+                            ]);
+                        }
                     }
                 }
-                $booking->payment->update(['status' => 'refunded']);
+                $booking->payment->update([
+                    'status' => $refunded ? 'refunded' : 'refund_pending',
+                ]);
             }
         }
 
@@ -275,17 +287,30 @@ class BookingController extends Controller
 
         if ($request->status === 'cancelled') {
             if ($booking->payment && in_array($booking->payment->status, ['pending', 'paid'])) {
-                if ($booking->payment->status === 'paid' && $booking->payment->order_id) {
-                    try {
-                        Transaction::cancel($booking->payment->order_id);
-                    } catch (\Exception $e) {
-                        Log::warning('Midtrans void failed saat admin cancel', [
-                            'booking_id' => $booking->id,
-                            'order_id'   => $booking->payment->order_id,
-                            'error'      => $e->getMessage(),
-                        ]);
+                if ($booking->payment->status === 'paid') {
+                    $refunded = false;
+                    if ($booking->payment->order_id) {
+                        try {
+                            Transaction::cancel($booking->payment->order_id);
+                            $refunded = true;
+                        } catch (\Exception $e) {
+                            try {
+                                $refund = Transaction::refund($booking->payment->order_id);
+                                if (isset($refund->status_code) && $refund->status_code === '200') {
+                                    $refunded = true;
+                                }
+                            } catch (\Exception $e2) {
+                                Log::error('Midtrans refund failed (admin)', [
+                                    'booking_id' => $booking->id,
+                                    'order_id'   => $booking->payment->order_id,
+                                    'error'      => $e2->getMessage(),
+                                ]);
+                            }
+                        }
                     }
-                    $booking->payment->update(['status' => 'refunded']);
+                    $booking->payment->update([
+                        'status' => $refunded ? 'refunded' : 'refund_pending',
+                    ]);
                 } else {
                     $booking->payment->update(['status' => 'failed']);
                 }
