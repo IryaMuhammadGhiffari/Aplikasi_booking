@@ -146,9 +146,26 @@ class BookingModel {
   bool get canReschedule =>
       (status == 'pending' || status == 'confirmed') && !isPaid;
 
-  /// Cancel: paid booking juga boleh — nanti refund
-  bool get canCancel =>
-      status == 'pending' || status == 'confirmed';
+  /// Cancel: minimal 6 jam sebelum jadwal
+  bool get canCancel {
+    if (status != 'pending' && status != 'confirmed') return false;
+    return _isMoreThan6HoursBefore;
+  }
+
+  /// Cek minimal 6 jam dari sekarang ke jadwal booking
+  bool get _isMoreThan6HoursBefore {
+    try {
+      final date = DateTime.parse(bookingDate);
+      final parts = bookingTime.split(':');
+      final bookingDt = DateTime(
+        date.year, date.month, date.day,
+        int.parse(parts[0]), int.parse(parts[1]),
+      );
+      return bookingDt.difference(DateTime.now()).inHours >= 6;
+    } catch (_) {
+      return true; // error parsing → izinin cancel aja
+    }
+  }
 
   bool get isAwaitingAdmin => status == 'pending';
 }

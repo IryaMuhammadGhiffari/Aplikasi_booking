@@ -131,6 +131,15 @@ class BookingController extends Controller
             ], 422);
         }
 
+        // Minimal 6 jam sebelum jadwal
+        $bookingDateTime = \Carbon\Carbon::parse($booking->booking_date . ' ' . $booking->booking_time);
+        if ($bookingDateTime->diffInHours(now()) < 6) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking tidak bisa dibatalkan karena kurang dari 6 jam sebelum jadwal.',
+            ], 422);
+        }
+
         $booking->update(['status' => 'cancelled']);
 
         if ($booking->payment) {
