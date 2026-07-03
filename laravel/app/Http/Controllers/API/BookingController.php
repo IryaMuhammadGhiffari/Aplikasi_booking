@@ -149,24 +149,33 @@ class BookingController extends Controller
             $booking->payment->refresh();
         }
 
-        $booking->update(['status' => 'cancelled']);
+        $refunded = false;
+        $refundMessage = '';
 
         if ($booking->payment) {
             if ($booking->payment->status === 'pending') {
                 $booking->payment->update(['status' => 'failed']);
+                $refunded = true; // pending tidak perlu refund, cukup gagal
             } elseif ($booking->payment->status === 'paid') {
-                $refunded = false;
                 if ($booking->payment->order_id) {
                     try {
                         // 1. Coba void dulu (untuk transaksi pending/belum settle)
                         Transaction::cancel($booking->payment->order_id);
                         $refunded = true;
+                        $refundMessage = 'Void berhasil, dana dikembalikan instan.';
                     } catch (\Exception $e) {
-                        // 2. Kalau void gagal (sudah settle), coba refund
+                        // 2. Kalau void gagal (sudah settle), coba refund dengan amount
                         try {
-                            $refund = Transaction::refund($booking->payment->order_id);
+                            $amount = (int) $booking->payment->amount; // amount dalam rupiah
+                            $refund = Transaction::refund($booking->payment->order_id, [
+                                'amount' => $amount,
+                                'reason' => 'Customer cancel booking',
+                            ]);
                             if (isset($refund->status_code) && $refund->status_code === '200') {
                                 $refunded = true;
+                                $refundMessage = 'Refund diproses, dana kembali 1-7 hari kerja.';
+                            } else {
+                                $refundMessage = 'Refund gagal: ' . ($refund->status_message ?? 'Unknown error');
                             }
                         } catch (\Exception $e2) {
                             Log::error('Midtrans refund failed', [
@@ -174,6 +183,7 @@ class BookingController extends Controller
                                 'order_id'   => $booking->payment->order_id,
                                 'error'      => $e2->getMessage(),
                             ]);
+                            $refundMessage = 'Refund error: ' . $e2->getMessage();
                         }
                     }
                 }
@@ -183,9 +193,14 @@ class BookingController extends Controller
             }
         }
 
+        // Update booking status SETELAH proses refund
+        $booking->update(['status' => 'cancelled']);
+
         $message = 'Booking berhasil dibatalkan.';
         if ($booking->payment?->status === 'refunded') {
-            $message = 'Booking dibatalkan. Dana akan dikembalikan. Hubungi admin jika refund belum diterima dalam 1x24 jam.';
+            $message = 'Booking dibatalkan. ' . ($refundMessage ?: 'Dana akan dikembalikan. Hubungi admin jika refund belum diterima dalam 1x24 jam.');
+        } elseif ($booking->payment?->status === 'refund_pending') {
+            $message = 'Booking dibatalkan tapi refund gagal: ' . $refundMessage . '. Hubungi admin untuk proses manual.';
         }
 
         return response()->json(['success' => true, 'message' => $message]);
@@ -301,7 +316,11 @@ class BookingController extends Controller
                             $refunded = true;
                         } catch (\Exception $e) {
                             try {
-                                $refund = Transaction::refund($booking->payment->order_id);
+                                $amount = (int) $booking->payment->amount;
+                                $refund = Transaction::refund($booking->payment->order_id, [
+                                    'amount' => $amount,
+                                    'reason' => 'Admin cancel booking',
+                                ]);
                                 if (isset($refund->status_code) && $refund->status_code === '200') {
                                     $refunded = true;
                                 }
