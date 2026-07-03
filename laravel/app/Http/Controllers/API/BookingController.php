@@ -181,13 +181,6 @@ class BookingController extends Controller
             ], 422);
         }
 
-        if ($booking->status === 'confirmed' && $booking->payment?->status === 'paid') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Booking sudah dibayar. Hubungi admin untuk ubah jadwal.',
-            ], 422);
-        }
-
         $request->validate([
             'booking_date' => 'required|date|after_or_equal:today',
             'booking_time' => 'required|date_format:H:i',

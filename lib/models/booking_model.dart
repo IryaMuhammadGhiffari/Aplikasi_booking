@@ -144,7 +144,7 @@ class BookingModel {
   bool get canPay => canPayGateway;
 
   bool get canReschedule =>
-      (status == 'pending' || status == 'confirmed') && !isPaid;
+      status == 'pending' || status == 'confirmed';
 
   /// Cancel: minimal 6 jam sebelum jadwal
   bool get canCancel {
