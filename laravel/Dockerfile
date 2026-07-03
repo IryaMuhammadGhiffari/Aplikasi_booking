@@ -49,7 +49,7 @@ RUN mkdir -p \
   && chown -R www-data:www-data storage bootstrap/cache \
   && chmod -R 775 storage bootstrap/cache
 
-# Install PHP dependencies (dengan retry untuk network flaky)
+# Install PHP dependencies (dengan retry untuk network flaky) — force rebuild 2
 RUN for i in 1 2 3; do \
       composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist && break || \
       { echo "Composer install failed, retry $i/3..."; sleep 10; }; \
