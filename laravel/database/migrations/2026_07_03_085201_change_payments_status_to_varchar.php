@@ -9,10 +9,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 1. Hapus constraint enum lama (PostgreSQL)
+        // 1. Hapus constraint lama kalau ada (idempotent)
+        DB::statement("ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_status_check");
+
+        // 2. Ubah kolom status dari enum ke varchar (idempotent - aman dijalankan berulang)
         DB::statement("ALTER TABLE payments ALTER COLUMN status TYPE varchar(255) USING status::varchar");
 
-        // 2. Tambah check constraint untuk validasi nilai
+        // 3. Tambah check constraint baru dengan nilai lengkap
         DB::statement("
             ALTER TABLE payments 
             ADD CONSTRAINT payments_status_check 
@@ -22,10 +25,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Hapus check constraint
         DB::statement("ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_status_check");
         
-        // Kembalikan ke enum (butuh cast ulang)
         DB::statement("
             ALTER TABLE payments 
             ALTER COLUMN status TYPE payments_status 
