@@ -132,6 +132,6 @@ class ApiService {
 
   // REFUNDS
   Future<Response> adminGetRefunds() => _dio.get('/admin/refunds');
-  Future<Response> approveRefund(int id) =>
-      _dio.patch('/admin/refunds/$id/approve');
+  Future<Response> approveRefund(int id, {String? adminNote}) =>
+      _dio.patch('/admin/refunds/$id/approve', data: {'admin_note': adminNote});
 }

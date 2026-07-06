@@ -334,7 +334,7 @@ class PaymentController extends Controller
                 'booking.barber'  => fn ($q) => $q->select('barbers.id', 'barbers.name'),
             ])
             ->where('status', 'refund_pending')
-            ->select('id', 'booking_id', 'order_id', 'transaction_id', 'amount', 'payment_method', 'status', 'cancel_reason', 'paid_at', 'created_at')
+            ->select('id', 'booking_id', 'order_id', 'transaction_id', 'amount', 'payment_method', 'status', 'cancel_reason', 'admin_note', 'paid_at', 'created_at')
             ->orderByDesc('created_at')
             ->get();
 
@@ -344,8 +344,12 @@ class PaymentController extends Controller
         ]);
     }
 
-    public function approveRefund($id)
+    public function approveRefund(Request $request, $id)
     {
+        $request->validate([
+            'admin_note' => 'nullable|string|max:500',
+        ]);
+
         $payment = Payment::with('booking.user')->findOrFail($id);
 
         if ($payment->status !== 'refund_pending') {
@@ -356,8 +360,9 @@ class PaymentController extends Controller
         }
 
         $payment->update([
-            'status'  => 'refunded',
-            'paid_at' => null,
+            'status'     => 'refunded',
+            'paid_at'    => null,
+            'admin_note' => $request->admin_note,
         ]);
 
         return response()->json([

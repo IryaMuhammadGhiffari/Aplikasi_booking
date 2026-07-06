@@ -37,9 +37,9 @@ class AdminRefundProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> approveRefund(int id) async {
+  Future<bool> approveRefund(int id, {String? adminNote}) async {
     try {
-      await _api.approveRefund(id);
+      await _api.approveRefund(id, adminNote: adminNote);
       _refunds.removeWhere((r) => r['id'] == id);
       notifyListeners();
       return true;
