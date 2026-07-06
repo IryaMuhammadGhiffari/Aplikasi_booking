@@ -9,7 +9,7 @@ import '../../utils/app_colors.dart';
 import '../../utils/extensions.dart';
 import '../../utils/app_routes.dart';
 import '../../widgets/gold_button.dart';
-import '../../widgets/midtrans_payment_webview.dart';
+import '../../widgets/pakasir_payment_webview.dart';
 import '../../widgets/payment_success_view.dart';
 
 /// Layar pembayaran — hanya untuk booking yang sudah dikonfirmasi admin.
@@ -172,7 +172,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           GoldButton(
             onPressed: _loadingPayment ? null : _startPayment,
             isLoading: _loadingPayment,
-            label: 'BAYAR VIA MIDTRANS',
+            label: 'BAYAR ONLINE (QRIS / VA)',
             icon: Icons.payment,
           ),
           const SizedBox(height: 10),
@@ -208,7 +208,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _buildWebView() {
-    return MidtransPaymentWebView(
+    return PakasirPaymentWebView(
       key: const ValueKey('webview'),
       bookingId: _booking.id,
       initialSnapUrl: _snapUrl!,

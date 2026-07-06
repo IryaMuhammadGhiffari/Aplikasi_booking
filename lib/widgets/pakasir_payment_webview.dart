@@ -8,14 +8,14 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../providers/booking_provider.dart';
 import '../utils/app_colors.dart';
 
-/// WebView pembayaran Midtrans Snap — polling silent, auto-redirect saat lunas.
-class MidtransPaymentWebView extends StatefulWidget {
+/// WebView pembayaran Pakasir — polling silent, auto-redirect saat lunas.
+class PakasirPaymentWebView extends StatefulWidget {
   final int bookingId;
   final String initialSnapUrl;
   final VoidCallback onClose;
   final void Function(bool success) onPaymentFinished;
 
-  const MidtransPaymentWebView({
+  const PakasirPaymentWebView({
     super.key,
     required this.bookingId,
     required this.initialSnapUrl,
@@ -24,10 +24,10 @@ class MidtransPaymentWebView extends StatefulWidget {
   });
 
   @override
-  State<MidtransPaymentWebView> createState() => _MidtransPaymentWebViewState();
+  State<PakasirPaymentWebView> createState() => _PakasirPaymentWebViewState();
 }
 
-class _MidtransPaymentWebViewState extends State<MidtransPaymentWebView> {
+class _PakasirPaymentWebViewState extends State<PakasirPaymentWebView> {
   late WebViewController _ctrl;
   static const _maxPollDuration = Duration(minutes: 5);
   DateTime? _pollStartTime;

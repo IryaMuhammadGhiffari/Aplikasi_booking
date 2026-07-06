@@ -16,7 +16,7 @@ class ProfileHelpScreen extends StatelessWidget {
     ),
     (
       'Metode pembayaran apa saja?',
-      'Kamu bisa bayar online (Midtrans) atau tunai langsung di tempat saat kedatangan.',
+      'Kamu bisa bayar online (QRIS / Virtual Account) atau tunai langsung di tempat saat kedatangan.',
     ),
     (
       'Bisa ubah jadwal?',
