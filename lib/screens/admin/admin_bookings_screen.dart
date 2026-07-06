@@ -393,30 +393,6 @@ class _BookingAdminCard extends StatelessWidget {
     }
 
     if (status == 'confirmed') {
-      final payment = booking['payment'] as Map?;
-      final paymentStatus = payment?['status'] as String?;
-      final paymentMethod = payment?['payment_method'] as String?;
-      final isPaid = paymentStatus == 'paid';
-      final isCashlessPending = paymentStatus == 'pending' && paymentMethod == 'cashless';
-      final canStart = isPaid || isCashlessPending;
-
-      if (!canStart) {
-        return SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: null,
-            icon: const Icon(Icons.lock_outline, size: 14, color: AppColors.grey),
-            label: const Text('Belum dibayar',
-                style: TextStyle(color: AppColors.grey)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.grey,
-              side: const BorderSide(color: AppColors.grey),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-          ));
-      }
-
       return SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(

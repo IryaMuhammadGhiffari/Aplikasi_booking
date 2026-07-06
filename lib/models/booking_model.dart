@@ -139,7 +139,7 @@ class BookingModel {
       payment?.status == 'pending' && payment?.paymentMethod == 'cashless';
 
   bool get canPayGateway =>
-      status == 'confirmed' && !isPaid && !isCashlessPending;
+      (status == 'confirmed' || status == 'in_progress') && !isPaid && !isCashlessPending;
 
   bool get canPay => canPayGateway;
 
