@@ -412,18 +412,25 @@ class _BookingAdminCard extends StatelessWidget {
     }
 
     if (status == 'in_progress') {
+      final payment = booking['payment'] as Map?;
+      final paymentStatus = payment?['status'] as String?;
+      final paymentMethod = payment?['payment_method'] as String?;
+      final isPaid = paymentStatus == 'paid';
+      final isCashlessPending = paymentStatus == 'pending' && paymentMethod == 'cashless';
+      final canComplete = isPaid || isCashlessPending;
+
       return SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: isLoading ? null : () => _update(context, 'completed'),
+            onPressed: isLoading || !canComplete ? null : () => _update(context, 'completed'),
             icon: const Icon(Icons.done_all, size: 16, color: Colors.white),
             label: isLoading
                 ? const Text('Memproses...',
                     style: TextStyle(color: Colors.white))
-                : const Text('Selesaikan',
+                : Text(canComplete ? 'Selesaikan' : 'Belum dibayar',
                     style: TextStyle(color: Colors.white)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
+              backgroundColor: canComplete ? AppColors.success : AppColors.grey,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
             ),

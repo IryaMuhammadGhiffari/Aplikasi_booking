@@ -298,8 +298,9 @@ class BookingController extends Controller
 
         $booking = Booking::with(['payment' => fn ($q) => $q->select('id', 'booking_id', 'order_id', 'status', 'payment_method')])->findOrFail($id);
 
-        // Validasi: hanya boleh in_progress/completed kalau sudah dibayar (paid) atau cashless pending
-        if (in_array($request->status, ['in_progress', 'completed'])) {
+        // Validasi: hanya boleh completed kalau sudah dibayar (paid) atau cashless pending
+        // in_progress (Mulai Layanan) boleh tanpa bayar
+        if ($request->status === 'completed') {
             $payment = $booking->payment;
             $isPaid = $payment && in_array($payment->status, ['paid', 'pending']) && $payment->payment_method === 'cashless';
             $isPaidGateway = $payment && $payment->status === 'paid';
@@ -307,7 +308,7 @@ class BookingController extends Controller
             if (!$isPaid && !$isPaidGateway) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Booking belum dibayar. Tidak bisa memulai/menyelesaikan layanan.',
+                    'message' => 'Booking belum dibayar. Tidak bisa menyelesaikan layanan.',
                 ], 422);
             }
         }
