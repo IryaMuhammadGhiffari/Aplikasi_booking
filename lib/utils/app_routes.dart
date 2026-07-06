@@ -20,5 +20,6 @@ class AppRoutes {
   static const String adminBarbers   = '/admin/barbers';
   static const String adminBookings  = '/admin/bookings';
   static const String adminTrx       = '/admin/transactions';
+  static const String adminRefund    = '/admin/refund';
   static const String transactionDetail = '/transaction/detail';
 }

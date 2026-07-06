@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/admin_booking_provider.dart';
 import '../../providers/admin_transaction_provider.dart';
+import '../../providers/admin_refund_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_routes.dart';
@@ -11,6 +12,7 @@ import '../../utils/extensions.dart';
 import 'admin_bookings_screen.dart';
 import 'admin_services_screen.dart';
 import 'admin_transactions_screen.dart';
+import 'admin_refund_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -33,6 +35,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           AdminBookingsScreen(),
           AdminServicesScreen(),
           AdminTransactionsScreen(),
+          AdminRefundScreen(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -71,6 +74,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 icon: Icon(Icons.design_services_outlined),
                 activeIcon: Icon(Icons.design_services),
                 label: 'Layanan'),
+            BottomNavigationBarItem(
+                icon: _RefundTabIcon(
+                    count: context
+                        .watch<AdminRefundProvider>()
+                        .pendingCount),
+                activeIcon: _RefundTabIcon(
+                    count: context
+                        .watch<AdminRefundProvider>()
+                        .pendingCount,
+                    active: true),
+                label: 'Refund'),
             BottomNavigationBarItem(
                 icon: _TransaksiTabIcon(
                     count: context
@@ -191,6 +205,7 @@ class _HomeTabState extends State<_HomeTab> {
     await Future.wait([
       context.read<AdminBookingProvider>().fetch(),
       context.read<AdminTransactionProvider>().fetchTransactions(),
+      context.read<AdminRefundProvider>().fetchRefunds(),
     ]);
     if (!mounted) return;
     _prevPaymentCount =
@@ -239,6 +254,7 @@ class _HomeTabState extends State<_HomeTab> {
     await Future.wait([
       context.read<AdminBookingProvider>().fetch(),
       context.read<AdminTransactionProvider>().fetchTransactions(),
+      context.read<AdminRefundProvider>().fetchRefunds(),
     ]);
     if (!mounted) return;
     _prevPaymentCount =
@@ -503,6 +519,23 @@ class _BookingTabIcon extends StatelessWidget {
       label: Text('$count', style: const TextStyle(fontSize: 10)),
       child:
           Icon(active ? Icons.calendar_month : Icons.calendar_month_outlined),
+    );
+  }
+}
+
+class _RefundTabIcon extends StatelessWidget {
+  final int count;
+  final bool active;
+  const _RefundTabIcon({required this.count, this.active = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Badge(
+      isLabelVisible: count > 0,
+      label: Text('$count', style: const TextStyle(fontSize: 10)),
+      child: Icon(active
+          ? Icons.replay
+          : Icons.replay_outlined),
     );
   }
 }

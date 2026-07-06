@@ -325,6 +325,48 @@ class PaymentController extends Controller
         ]);
     }
 
+    public function adminRefunds()
+    {
+        $payments = Payment::with([
+                'booking'         => fn ($q) => $q->select('id', 'booking_code', 'user_id', 'barber_id', 'booking_date', 'booking_time', 'total_price', 'status', 'created_at'),
+                'booking.user'    => fn ($q) => $q->select('id', 'name', 'email', 'phone'),
+                'booking.services'=> fn ($q) => $q->select('services.id', 'services.name', 'services.price'),
+                'booking.barber'  => fn ($q) => $q->select('barbers.id', 'barbers.name'),
+            ])
+            ->where('status', 'refund_pending')
+            ->select('id', 'booking_id', 'order_id', 'transaction_id', 'amount', 'payment_method', 'status', 'paid_at', 'created_at')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $payments,
+        ]);
+    }
+
+    public function approveRefund($id)
+    {
+        $payment = Payment::with('booking.user')->findOrFail($id);
+
+        if ($payment->status !== 'refund_pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Status pembayaran bukan refund_pending.',
+            ], 422);
+        }
+
+        $payment->update([
+            'status'  => 'refunded',
+            'paid_at' => null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Refund berhasil dikonfirmasi.',
+            'data'    => $payment,
+        ]);
+    }
+
     public function revenueReport(Request $request)
     {
         $request->validate([

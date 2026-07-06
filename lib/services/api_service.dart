@@ -123,4 +123,9 @@ class ApiService {
   Future<Response> getRevenueReport(String start, String end) =>
       _dio.get('/admin/revenue-report',
           queryParameters: {'start_date': start, 'end_date': end});
+
+  // REFUNDS
+  Future<Response> adminGetRefunds() => _dio.get('/admin/refunds');
+  Future<Response> approveRefund(int id) =>
+      _dio.patch('/admin/refunds/$id/approve');
 }

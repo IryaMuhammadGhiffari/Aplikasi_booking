@@ -9,6 +9,7 @@ import 'providers/barber_provider.dart';
 import 'providers/admin_booking_provider.dart';
 import 'providers/admin_transaction_provider.dart';
 import 'providers/admin_barber_provider.dart';
+import 'providers/admin_refund_provider.dart';
 import 'services/api_service.dart';
 import 'utils/app_theme.dart';
 import 'utils/app_routes.dart';
@@ -35,6 +36,7 @@ import 'screens/admin/admin_services_screen.dart';
 import 'screens/admin/admin_barbers_screen.dart';
 import 'screens/admin/admin_bookings_screen.dart';
 import 'screens/admin/admin_transactions_screen.dart';
+import 'screens/admin/admin_refund_screen.dart';
 import 'screens/shared/transaction_detail_screen.dart';
 
 void main() async {
@@ -66,6 +68,7 @@ class ArfanBarbershopApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AdminBookingProvider()),
         ChangeNotifierProvider(create: (_) => AdminTransactionProvider()),
         ChangeNotifierProvider(create: (_) => AdminBarberProvider()),
+        ChangeNotifierProvider(create: (_) => AdminRefundProvider()),
       ],
       child: MaterialApp(
         title:                     'Arfan Barbershop',
@@ -116,6 +119,8 @@ class ArfanBarbershopApp extends StatelessWidget {
               return MaterialPageRoute(builder: (_) => const AdminBookingsScreen());
             case AppRoutes.adminTrx:
               return MaterialPageRoute(builder: (_) => const AdminTransactionsScreen());
+            case AppRoutes.adminRefund:
+              return MaterialPageRoute(builder: (_) => const AdminRefundScreen());
             case AppRoutes.payment:
               final booking = settings.arguments;
               return MaterialPageRoute(
