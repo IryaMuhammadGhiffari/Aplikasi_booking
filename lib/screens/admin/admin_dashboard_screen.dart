@@ -192,6 +192,7 @@ class _HomeTab extends StatefulWidget {
 class _HomeTabState extends State<_HomeTab> {
   Timer? _pollTimer;
   int _prevPaymentCount = 0;
+  int _prevRefundCount = 0;
 
   @override
   void initState() {
@@ -210,6 +211,8 @@ class _HomeTabState extends State<_HomeTab> {
     if (!mounted) return;
     _prevPaymentCount =
         context.read<AdminTransactionProvider>().todayPaymentCount;
+    _prevRefundCount =
+        context.read<AdminRefundProvider>().pendingCount;
     _startPolling();
   }
 
@@ -223,16 +226,17 @@ class _HomeTabState extends State<_HomeTab> {
     await Future.wait([
       context.read<AdminBookingProvider>().fetch(),
       context.read<AdminTransactionProvider>().fetchTransactions(),
+      context.read<AdminRefundProvider>().fetchRefunds(),
     ]);
     if (!mounted) return;
 
     // Deteksi pembayaran baru
-    final current = context.read<AdminTransactionProvider>().todayPaymentCount;
-    if (current > _prevPaymentCount && _prevPaymentCount > 0) {
+    final currentPay = context.read<AdminTransactionProvider>().todayPaymentCount;
+    if (currentPay > _prevPaymentCount && _prevPaymentCount > 0) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
-              'Pembayaran baru masuk! (+${current - _prevPaymentCount})',
+              'Pembayaran baru masuk! (+${currentPay - _prevPaymentCount})',
               style: GoogleFonts.poppins(color: Colors.white)),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
@@ -240,7 +244,24 @@ class _HomeTabState extends State<_HomeTab> {
         ));
       }
     }
-    _prevPaymentCount = current;
+    _prevPaymentCount = currentPay;
+
+    // Deteksi refund baru
+    final currentRef = context.read<AdminRefundProvider>().pendingCount;
+    if (currentRef > _prevRefundCount && _prevRefundCount > 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Pembatalan dengan refund masuk! (+${currentRef - _prevRefundCount})',
+              style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+        ));
+      }
+    }
+    _prevRefundCount = currentRef;
+
     _startPolling();
   }
 
@@ -259,6 +280,8 @@ class _HomeTabState extends State<_HomeTab> {
     if (!mounted) return;
     _prevPaymentCount =
         context.read<AdminTransactionProvider>().todayPaymentCount;
+    _prevRefundCount =
+        context.read<AdminRefundProvider>().pendingCount;
   }
 
   @override
