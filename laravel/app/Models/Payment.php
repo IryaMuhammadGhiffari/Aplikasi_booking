@@ -13,16 +13,13 @@ class Payment extends Model
         'amount',
         'payment_method',
         'status',
-        'snap_token',
-        'snap_url',
-        'midtrans_response',
+        'payment_url',
         'paid_at',
     ];
 
     protected $casts = [
-        'amount'            => 'decimal:2',
-        'midtrans_response' => 'array',
-        'paid_at'           => 'datetime',
+        'amount'  => 'decimal:2',
+        'paid_at' => 'datetime',
     ];
 
     public function booking()

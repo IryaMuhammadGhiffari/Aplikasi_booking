@@ -6,28 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Payment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Midtrans\Config;
-use Midtrans\Snap;
-use Midtrans\Notification;
-use Midtrans\Transaction;
 
 class PaymentController extends Controller
 {
-    public function __construct()
-    {
-        Config::$serverKey    = 'Mid-server-aHPclL_F17BrzXl6nAZPBLQz';
-        Config::$isProduction = false;
-        Config::$isSanitized  = true;
-        Config::$is3ds        = true;
-        // Nonaktifkan SSL verify untuk development (Windows tanpa CA bundle)
-        Config::$curlOptions = [
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
-            CURLOPT_HTTPHEADER => [],
-        ];
-    }
-
+    /**
+     * Buat transaksi pembayaran via Pakasir.
+     * Pakasir API: POST /api/transactioncreate/all
+     * Response: { payment: { payment_url, order_id, status, ... } }
+     */
     public function createTransaction(Request $request, $bookingId)
     {
         set_time_limit(120);
@@ -36,7 +24,7 @@ class PaymentController extends Controller
                 'user'     => fn ($q) => $q->select('id', 'name', 'email', 'phone'),
                 'services' => fn ($q) => $q->select('services.id', 'services.name', 'services.price'),
                 'barber'   => fn ($q) => $q->select('id', 'name'),
-                'payment'  => fn ($q) => $q->select('id', 'booking_id', 'order_id', 'amount', 'status', 'payment_method', 'snap_token', 'snap_url'),
+                'payment'  => fn ($q) => $q->select('id', 'booking_id', 'order_id', 'amount', 'status', 'payment_method', 'payment_url'),
             ])
             ->where('user_id', $request->user()->id)
             ->findOrFail($bookingId);
@@ -58,53 +46,51 @@ class PaymentController extends Controller
         $refresh  = $request->boolean('refresh');
         $existing = Payment::where('booking_id', $booking->id)
             ->where('status', 'pending')
-            ->whereNotNull('snap_token')
+            ->whereNotNull('payment_url')
             ->first();
 
         if ($existing && !$refresh) {
             return response()->json([
                 'success' => true,
                 'data'    => [
-                    'snap_token' => $existing->snap_token,
-                    'snap_url'   => $existing->snap_url,
-                    'order_id'   => $existing->order_id,
+                    'payment_url' => $existing->payment_url,
+                    'order_id'    => $existing->order_id,
                 ],
             ]);
         }
 
+        // Kalau refresh, cancel transaksi lama di Pakasir
         if ($existing && $refresh) {
-            try {
-                Transaction::cancel($existing->order_id);
-            } catch (\Exception) {
-                // Transaksi lama mungkin sudah tidak bisa dibatalkan di Midtrans
-            }
+            $this->cancelPakasirTransaction($existing->order_id, (int) $existing->amount);
         }
 
         $orderId = 'ARF-PAY-' . $booking->id . '-' . time();
-
-        $params = [
-            'transaction_details' => [
-                'order_id'     => $orderId,
-                'gross_amount' => (int) $booking->total_price,
-            ],
-            'customer_details' => [
-                'first_name' => $booking->user->name,
-                'email'      => $booking->user->email,
-                'phone'      => $booking->user->phone ?? '',
-            ],
-            'item_details' => $booking->services->map(fn($service) => [
-                'id'       => $service->id,
-                'price'    => (int) $service->price,
-                'quantity' => 1,
-                'name'     => $service->name,
-            ])->values()->toArray(),
-        ];
+        $amount  = (int) $booking->total_price;
 
         try {
-            $snapToken = Snap::getSnapToken($params);
-            $snapUrl   = 'https://app.sandbox.midtrans.com/snap/v2/vtweb/' . $snapToken;
+            $response = Http::post('https://app.pakasir.com/api/transactioncreate/all', [
+                'project'  => config('pakasir.slug'),
+                'order_id' => $orderId,
+                'amount'   => $amount,
+                'api_key'  => config('pakasir.api_key'),
+            ]);
+
+            $result = $response->json();
+
+            if (!$response->successful() || !$result || !isset($result['payment'])) {
+                $errMsg = $result['message'] ?? 'Response tidak valid dari Pakasir';
+                throw new \Exception($errMsg);
+            }
+
+            $paymentData = $result['payment'];
+            $paymentUrl  = $paymentData['payment_url'] ?? null;
+
+            if (!$paymentUrl) {
+                throw new \Exception('Pakasir tidak mengembalikan payment_url');
+            }
+
         } catch (\Exception $e) {
-            Log::warning('Midtrans createTransaction error: ' . $e->getMessage());
+            Log::warning('Pakasir createTransaction error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal terhubung ke server pembayaran. Silakan coba lagi.',
@@ -114,45 +100,138 @@ class PaymentController extends Controller
         Payment::updateOrCreate(
             ['booking_id' => $booking->id],
             [
-                'order_id'   => $orderId,
-                'amount'     => $booking->total_price,
-                'status'     => 'pending',
-                'snap_token' => $snapToken,
-                'snap_url'   => $snapUrl,
+                'order_id'       => $orderId,
+                'amount'         => $booking->total_price,
+                'status'         => 'pending',
+                'payment_method' => $paymentData['payment_method'] ?? 'qris',
+                'payment_url'    => $paymentUrl,
+                'transaction_id' => $paymentData['order_id'] ?? null,
             ]
         );
 
         return response()->json([
             'success' => true,
             'data'    => [
-                'snap_token' => $snapToken,
-                'snap_url'   => $snapUrl,
-                'order_id'   => $orderId,
+                'payment_url' => $paymentUrl,
+                'order_id'    => $orderId,
             ],
         ]);
     }
 
+    /**
+     * Webhook dari Pakasir — dipanggil saat pembayaran sukses.
+     * Body: { amount, order_id, project, status, payment_method, completed_at }
+     */
     public function notification(Request $request)
     {
         try {
-            $notification = new Notification();
+            $payload = $request->all();
 
-            $payment = Payment::where('order_id', $notification->order_id)->firstOrFail();
+            $payment = Payment::where('order_id', $payload['order_id'])->first();
 
-            $this->applyMidtransUpdate($payment, [
-                'transaction_status' => $notification->transaction_status,
-                'fraud_status'       => $notification->fraud_status,
-                'payment_type'       => $notification->payment_type,
-                'transaction_id'     => $notification->transaction_id,
-            ], $request->all());
+            if (!$payment) {
+                Log::warning('Pakasir webhook: order_id tidak ditemukan', $payload);
+                return response()->json(['success' => false, 'message' => 'Order not found'], 404);
+            }
+
+            // Verifikasi amount cocok
+            $receivedAmount = (int) $payload['amount'];
+            $expectedAmount = (int) $payment->amount;
+            if ($receivedAmount !== $expectedAmount) {
+                Log::warning('Pakasir webhook: amount mismatch', [
+                    'expected' => $expectedAmount,
+                    'received' => $receivedAmount,
+                    'order_id' => $payload['order_id'],
+                ]);
+                return response()->json(['success' => false, 'message' => 'Amount mismatch'], 422);
+            }
+
+            // Map status Pakasir ke status lokal
+            $paymentStatus = match ($payload['status'] ?? '') {
+                'completed' => 'paid',
+                'canceled'  => 'failed',
+                default     => 'pending',
+            };
+
+            $payment->update([
+                'status'          => $paymentStatus,
+                'payment_method'  => $payload['payment_method'] ?? $payment->payment_method,
+                'paid_at'         => $paymentStatus === 'paid' ? ($payment->paid_at ?? now()) : null,
+            ]);
+
+            if ($paymentStatus === 'paid') {
+                Log::info("Pakasir payment completed: order_id={$payload['order_id']}, amount={$receivedAmount}");
+            }
 
             return response()->json(['success' => true]);
 
         } catch (\Exception $e) {
+            Log::error('Pakasir webhook error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Sync status dari Pakasir untuk payment pending.
+     */
+    private function syncFromPakasir(Payment $payment): void
+    {
+        if (!$payment->order_id || $payment->payment_method === 'cashless') {
+            return;
+        }
+
+        try {
+            $response = Http::get('https://app.pakasir.com/api/transactiondetail', [
+                'project'  => config('pakasir.slug'),
+                'amount'   => (int) $payment->amount,
+                'order_id' => $payment->order_id,
+                'api_key'  => config('pakasir.api_key'),
+            ]);
+
+            if (!$response->successful()) return;
+
+            $result = $response->json();
+            $data   = $result['transaction'] ?? null;
+            if (!$data) return;
+
+            $status = match ($data['status'] ?? '') {
+                'completed' => 'paid',
+                'canceled'  => 'failed',
+                default     => 'pending',
+            };
+
+            if ($status !== $payment->status) {
+                $payment->update([
+                    'status'          => $status,
+                    'payment_method'  => $data['payment_method'] ?? $payment->payment_method,
+                    'paid_at'         => $status === 'paid' ? ($payment->paid_at ?? now()) : null,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::warning('Pakasir sync error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Cancel transaksi di Pakasir.
+     */
+    public function cancelPakasirTransaction(string $orderId, int $amount): bool
+    {
+        try {
+            $response = Http::post('https://app.pakasir.com/api/transactioncancel', [
+                'project'  => config('pakasir.slug'),
+                'order_id' => $orderId,
+                'amount'   => $amount,
+                'api_key'  => config('pakasir.api_key'),
+            ]);
+
+            return $response->successful();
+        } catch (\Exception $e) {
+            Log::warning('Pakasir cancel error: ' . $e->getMessage());
+            return false;
         }
     }
 
@@ -181,15 +260,13 @@ class PaymentController extends Controller
         $payment = Payment::updateOrCreate(
             ['booking_id' => $booking->id],
             [
-                'order_id'        => $orderId,
-                'amount'          => $booking->total_price,
-                'payment_method'  => 'cashless',
-                'status'          => 'paid',
-                'paid_at'         => now(),
-                'snap_token'      => null,
-                'snap_url'        => null,
-                'transaction_id'  => null,
-                'midtrans_response' => null,
+                'order_id'       => $orderId,
+                'amount'         => $booking->total_price,
+                'payment_method' => 'cashless',
+                'status'         => 'paid',
+                'paid_at'        => now(),
+                'payment_url'    => null,
+                'transaction_id' => null,
             ]
         );
 
@@ -208,9 +285,9 @@ class PaymentController extends Controller
 
         if ($booking->payment && $booking->payment->status === 'pending') {
             if ($booking->payment->payment_method !== 'cashless') {
-                $this->syncPaymentFromMidtrans($booking->payment);
+                $this->syncFromPakasir($booking->payment);
             }
-            $booking->load(['payment' => fn ($q) => $q->select('id', 'booking_id', 'order_id', 'transaction_id', 'amount', 'status', 'payment_method', 'snap_token', 'snap_url', 'paid_at', 'midtrans_response')]);
+            $booking->load(['payment' => fn ($q) => $q->select('id', 'booking_id', 'order_id', 'transaction_id', 'amount', 'status', 'payment_method', 'payment_url', 'paid_at')]);
         }
 
         return response()->json([
@@ -266,63 +343,5 @@ class PaymentController extends Controller
                 'end_date'      => $request->end_date,
             ],
         ]);
-    }
-
-    private function mapMidtransStatus(string $transactionStatus, ?string $fraudStatus = null): string
-    {
-        if ($transactionStatus === 'capture') {
-            return ($fraudStatus === 'challenge') ? 'pending' : 'paid';
-        }
-        if ($transactionStatus === 'settlement') {
-            return 'paid';
-        }
-        if (in_array($transactionStatus, ['cancel', 'deny'], true)) {
-            return 'failed';
-        }
-        if ($transactionStatus === 'expire') {
-            return 'expired';
-        }
-
-        return 'pending';
-    }
-
-    private function applyMidtransUpdate(Payment $payment, array $midtrans, ?array $rawResponse = null): void
-    {
-        $paymentStatus = $this->mapMidtransStatus(
-            $midtrans['transaction_status'],
-            $midtrans['fraud_status'] ?? null
-        );
-
-        $payment->update([
-            'transaction_id'    => $midtrans['transaction_id'] ?? $payment->transaction_id,
-            'payment_method'    => $midtrans['payment_type'] ?? $payment->payment_method,
-            'status'            => $paymentStatus,
-            'midtrans_response' => $rawResponse ?? $payment->midtrans_response,
-            'paid_at'           => $paymentStatus === 'paid' ? ($payment->paid_at ?? now()) : null,
-        ]);
-    }
-
-    private function syncPaymentFromMidtrans(Payment $payment): void
-    {
-        if (!$payment->order_id || $payment->payment_method === 'cashless') {
-            return;
-        }
-
-        try {
-            $midtrans = Transaction::status($payment->order_id);
-        } catch (\Exception) {
-            return;
-        }
-
-        if (is_array($midtrans)) {
-            $midtrans = (object) $midtrans;
-        }
-
-        $this->applyMidtransUpdate($payment, [
-            'transaction_status' => $midtrans->transaction_status,
-            'fraud_status'       => $midtrans->fraud_status ?? null,
-            'payment_type'       => $midtrans->payment_type ?? null,
-            'transaction_id'     => $midtrans->transaction_id ?? null,
-        ], (array) $midtrans);
     }
 }

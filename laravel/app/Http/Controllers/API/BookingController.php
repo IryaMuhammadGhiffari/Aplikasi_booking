@@ -8,10 +8,16 @@ use App\Models\BarberUnavailability;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Midtrans\Transaction;
 
 class BookingController extends Controller
 {
+    private PaymentController $paymentController;
+
+    public function __construct()
+    {
+        $this->paymentController = new PaymentController();
+    }
+
     public function index(Request $request)
     {
         $bookings = Booking::with([
@@ -31,7 +37,7 @@ class BookingController extends Controller
         $booking = Booking::with([
                 'barber'   => fn ($q) => $q->select('id', 'name', 'specialty'),
                 'services' => fn ($q) => $q->select('services.id', 'services.name', 'services.price', 'services.duration'),
-                'payment'  => fn ($q) => $q->select('id', 'booking_id', 'order_id', 'transaction_id', 'amount', 'status', 'payment_method', 'snap_token', 'snap_url', 'paid_at', 'created_at'),
+                'payment'  => fn ($q) => $q->select('id', 'booking_id', 'order_id', 'transaction_id', 'amount', 'status', 'payment_method', 'payment_url', 'paid_at', 'created_at'),
                 'user'     => fn ($q) => $q->select('id', 'name', 'email', 'phone'),
             ])->findOrFail($id);
 
@@ -143,64 +149,38 @@ class BookingController extends Controller
         //     ], 422);
         // }
 
-        // Sync payment status dari Midtrans dulu (kalau bukan cashless)
-        if ($booking->payment && $booking->payment->payment_method !== 'cashless') {
-            $this->syncPaymentFromMidtrans($booking->payment);
-            $booking->payment->refresh();
-        }
-
-        $refunded = false;
+        $refunded      = false;
         $refundMessage = '';
 
         if ($booking->payment) {
+            // Sync status dari Pakasir dulu (kalau bukan cashless)
+            if ($booking->payment->payment_method !== 'cashless' && $booking->payment->status === 'pending') {
+                $this->paymentController->syncFromPakasir($booking->payment);
+                $booking->payment->refresh();
+            }
+
             if ($booking->payment->status === 'pending') {
-                $booking->payment->update(['status' => 'failed']);
-                $refunded = true; // pending tidak perlu refund, cukup gagal
-            } elseif ($booking->payment->status === 'paid') {
+                // Cancel di Pakasir + mark failed
                 if ($booking->payment->order_id) {
-                    try {
-                        // 1. Coba void dulu (untuk transaksi pending/belum settle)
-                        Transaction::cancel($booking->payment->order_id);
-                        $refunded = true;
-                        $refundMessage = 'Void berhasil, dana dikembalikan instan.';
-                    } catch (\Exception $e) {
-                        // 2. Kalau void gagal (sudah settle), coba refund dengan amount
-                        try {
-                            $amount = (int) $booking->payment->amount; // amount dalam rupiah
-                            $refund = Transaction::refund($booking->payment->order_id, [
-                                'amount' => $amount,
-                                'reason' => 'Customer cancel booking',
-                            ]);
-                            if (isset($refund->status_code) && $refund->status_code === '200') {
-                                $refunded = true;
-                                $refundMessage = 'Refund diproses, dana kembali 1-7 hari kerja.';
-                            } else {
-                                $refundMessage = 'Refund gagal: ' . ($refund->status_message ?? 'Unknown error');
-                            }
-                        } catch (\Exception $e2) {
-                            Log::error('Midtrans refund failed', [
-                                'booking_id' => $booking->id,
-                                'order_id'   => $booking->payment->order_id,
-                                'error'      => $e2->getMessage(),
-                            ]);
-                            $refundMessage = 'Refund error: ' . $e2->getMessage();
-                        }
-                    }
+                    $this->paymentController->cancelPakasirTransaction(
+                        $booking->payment->order_id,
+                        (int) $booking->payment->amount
+                    );
                 }
-                $booking->payment->update([
-                    'status' => $refunded ? 'refunded' : 'refund_pending',
-                ]);
+                $booking->payment->update(['status' => 'failed']);
+                $refunded = true; // pending tidak perlu refund
+            } elseif ($booking->payment->status === 'paid') {
+                // Pakasir tidak support refund — set refund_pending (manual)
+                $booking->payment->update(['status' => 'refund_pending']);
+                $refundMessage = 'Pakasir tidak mendukung refund otomatis. Hubungi admin untuk pengembalian dana.';
             }
         }
 
-        // Update booking status SETELAH proses refund
         $booking->update(['status' => 'cancelled']);
 
         $message = 'Booking berhasil dibatalkan.';
-        if ($booking->payment?->status === 'refunded') {
-            $message = 'Booking dibatalkan. ' . ($refundMessage ?: 'Dana akan dikembalikan. Hubungi admin jika refund belum diterima dalam 1x24 jam.');
-        } elseif ($booking->payment?->status === 'refund_pending') {
-            $message = 'Booking dibatalkan tapi refund gagal: ' . $refundMessage . '. Hubungi admin untuk proses manual.';
+        if ($booking->payment?->status === 'refund_pending') {
+            $message = 'Booking dibatalkan. ' . $refundMessage;
         }
 
         return response()->json(['success' => true, 'message' => $message]);
@@ -262,9 +242,8 @@ class BookingController extends Controller
 
         if ($wasConfirmed && $booking->payment?->status === 'pending') {
             $booking->payment->update([
-                'status'     => 'failed',
-                'snap_token' => null,
-                'snap_url'   => null,
+                'status'       => 'failed',
+                'payment_url'  => null,
             ]);
         }
 
@@ -274,7 +253,7 @@ class BookingController extends Controller
             'data'    => $booking->fresh([
                 'barber'   => fn ($q) => $q->select('id', 'name', 'specialty'),
                 'services' => fn ($q) => $q->select('services.id', 'services.name', 'services.price', 'services.duration'),
-                'payment'  => fn ($q) => $q->select('id', 'booking_id', 'order_id', 'transaction_id', 'amount', 'status', 'payment_method', 'snap_token', 'snap_url', 'paid_at'),
+                'payment'  => fn ($q) => $q->select('id', 'booking_id', 'order_id', 'transaction_id', 'amount', 'status', 'payment_method', 'payment_url', 'paid_at'),
             ]),
         ]);
     }
@@ -309,34 +288,16 @@ class BookingController extends Controller
         if ($request->status === 'cancelled') {
             if ($booking->payment && in_array($booking->payment->status, ['pending', 'paid'])) {
                 if ($booking->payment->status === 'paid') {
-                    $refunded = false;
-                    if ($booking->payment->order_id) {
-                        try {
-                            Transaction::cancel($booking->payment->order_id);
-                            $refunded = true;
-                        } catch (\Exception $e) {
-                            try {
-                                $amount = (int) $booking->payment->amount;
-                                $refund = Transaction::refund($booking->payment->order_id, [
-                                    'amount' => $amount,
-                                    'reason' => 'Admin cancel booking',
-                                ]);
-                                if (isset($refund->status_code) && $refund->status_code === '200') {
-                                    $refunded = true;
-                                }
-                            } catch (\Exception $e2) {
-                                Log::error('Midtrans refund failed (admin)', [
-                                    'booking_id' => $booking->id,
-                                    'order_id'   => $booking->payment->order_id,
-                                    'error'      => $e2->getMessage(),
-                                ]);
-                            }
-                        }
-                    }
-                    $booking->payment->update([
-                        'status' => $refunded ? 'refunded' : 'refund_pending',
-                    ]);
+                    // Pakasir tidak support refund — set refund_pending
+                    $booking->payment->update(['status' => 'refund_pending']);
                 } else {
+                    // Cancel di Pakasir + mark failed
+                    if ($booking->payment->order_id) {
+                        $this->paymentController->cancelPakasirTransaction(
+                            $booking->payment->order_id,
+                            (int) $booking->payment->amount
+                        );
+                    }
                     $booking->payment->update(['status' => 'failed']);
                 }
             }
@@ -347,59 +308,5 @@ class BookingController extends Controller
             'message' => 'Status booking berhasil diperbarui',
             'data'    => $booking->fresh(['payment' => fn ($q) => $q->select('id', 'booking_id', 'order_id', 'amount', 'status', 'payment_method', 'paid_at')]),
         ]);
-    }
-
-    private function syncPaymentFromMidtrans($payment): void
-    {
-        if (!$payment->order_id || $payment->payment_method === 'cashless') {
-            return;
-        }
-
-        try {
-            $midtrans = Transaction::status($payment->order_id);
-        } catch (\Exception) {
-            return;
-        }
-
-        if (is_array($midtrans)) {
-            $midtrans = (object) $midtrans;
-        }
-
-        $this->applyMidtransUpdate($payment, [
-            'transaction_status' => $midtrans->transaction_status,
-            'fraud_status'       => $midtrans->fraud_status ?? null,
-            'payment_type'       => $midtrans->payment_type ?? null,
-            'transaction_id'     => $midtrans->transaction_id ?? null,
-        ], (array) $midtrans);
-    }
-
-    private function applyMidtransUpdate($payment, array $midtrans, ?array $rawResponse = null): void
-    {
-        $paymentStatus = $this->mapMidtransStatus(
-            $midtrans['transaction_status'],
-            $midtrans['fraud_status'] ?? null
-        );
-
-        $payment->update([
-            'transaction_id'    => $midtrans['transaction_id'] ?? $payment->transaction_id,
-            'payment_method'    => $midtrans['payment_type'] ?? $payment->payment_method,
-            'status'            => $paymentStatus,
-            'midtrans_response' => $rawResponse ?? $payment->midtrans_response,
-            'paid_at'           => $paymentStatus === 'paid' ? ($payment->paid_at ?? now()) : null,
-        ]);
-    }
-
-    private function mapMidtransStatus(string $transactionStatus, ?string $fraudStatus): string
-    {
-        if ($transactionStatus === 'capture') {
-            return $fraudStatus === 'challenge' ? 'pending' : 'paid';
-        }
-        if ($transactionStatus === 'settlement') {
-            return 'paid';
-        }
-        if (in_array($transactionStatus, ['pending', 'authorize'])) {
-            return 'pending';
-        }
-        return 'failed';
     }
 }
