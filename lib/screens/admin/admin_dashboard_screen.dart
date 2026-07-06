@@ -12,7 +12,6 @@ import '../../utils/extensions.dart';
 import 'admin_bookings_screen.dart';
 import 'admin_services_screen.dart';
 import 'admin_transactions_screen.dart';
-import 'admin_refund_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -30,12 +29,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       drawer: _buildDrawer(),
       body: IndexedStack(
         index: _tab,
-        children: [
-          _HomeTab(onNavigateToRefund: () => setState(() => _tab = 4)),
-          const AdminBookingsScreen(),
-          const AdminServicesScreen(),
-          const AdminTransactionsScreen(),
-          const AdminRefundScreen(),
+        children: const [
+          _HomeTab(),
+          AdminBookingsScreen(),
+          AdminServicesScreen(),
+          AdminTransactionsScreen(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -74,17 +72,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 icon: Icon(Icons.design_services_outlined),
                 activeIcon: Icon(Icons.design_services),
                 label: 'Layanan'),
-            BottomNavigationBarItem(
-                icon: _RefundTabIcon(
-                    count: context
-                        .watch<AdminRefundProvider>()
-                        .pendingCount),
-                activeIcon: _RefundTabIcon(
-                    count: context
-                        .watch<AdminRefundProvider>()
-                        .pendingCount,
-                    active: true),
-                label: 'Refund'),
             BottomNavigationBarItem(
                 icon: _TransaksiTabIcon(
                     count: context
@@ -161,7 +148,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               count > 0 ? 'Pengajuan Refund ($count)' : 'Pengajuan Refund',
               () {
                 Navigator.pop(context);
-                setState(() => _tab = 4);
+                Navigator.pushNamed(context, AppRoutes.adminRefund);
               },
               trailing: count > 0
                   ? Container(
@@ -210,8 +197,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 // Tab Dashboard Utama
 // ════════════════════════════════════════════════════════════════
 class _HomeTab extends StatefulWidget {
-  final VoidCallback? onNavigateToRefund;
-  const _HomeTab({this.onNavigateToRefund});
+  const _HomeTab();
 
   @override
   State<_HomeTab> createState() => _HomeTabState();
@@ -349,7 +335,7 @@ class _HomeTabState extends State<_HomeTab> {
 
               return SliverToBoxAdapter(
                 child: GestureDetector(
-                  onTap: widget.onNavigateToRefund,
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.adminRefund),
                   child: Container(
                     margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -617,23 +603,6 @@ class _BookingTabIcon extends StatelessWidget {
       label: Text('$count', style: const TextStyle(fontSize: 10)),
       child:
           Icon(active ? Icons.calendar_month : Icons.calendar_month_outlined),
-    );
-  }
-}
-
-class _RefundTabIcon extends StatelessWidget {
-  final int count;
-  final bool active;
-  const _RefundTabIcon({required this.count, this.active = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Badge(
-      isLabelVisible: count > 0,
-      label: Text('$count', style: const TextStyle(fontSize: 10)),
-      child: Icon(active
-          ? Icons.replay
-          : Icons.replay_outlined),
     );
   }
 }
