@@ -13,8 +13,8 @@ class PaymentController extends Controller
 {
     /**
      * Buat transaksi pembayaran via Pakasir.
-     * Pakasir API: POST /api/transactioncreate/all
-     * Response: { payment: { payment_url, order_id, status, ... } }
+     * Pakasir SDK: payment_url digenerate lokal, API dipanggil untuk dapat payment_number
+     * Format payment_url: https://app.pakasir.com/pay/{project}/{amount}?order_id={order_id}&qris_only=1
      */
     public function createTransaction(Request $request, $bookingId)
     {
@@ -66,35 +66,42 @@ class PaymentController extends Controller
 
         $orderId = 'ARF-PAY-' . $booking->id . '-' . time();
         $amount  = (int) $booking->total_price;
+        $slug    = config('pakasir.slug');
 
+        // Payment URL digenerate lokal (Pakasir API tidak mengembalikan payment_url)
+        $paymentUrl = 'https://app.pakasir.com/pay/' . $slug . '/' . $amount
+            . '?order_id=' . urlencode($orderId) . '&qris_only=1';
+
+        // Data default (dipakai kalau API call gagal)
+        $paymentData = [
+            'payment_method' => 'qris',
+            'payment_number' => null,
+            'fee'            => 0,
+            'total_payment'  => $amount,
+            'expired_at'     => now()->addDay()->toIso8601String(),
+        ];
+
+        // Coba panggil API untuk dapat payment_number dan fee asli
         try {
-            $response = Http::post('https://app.pakasir.com/api/transactioncreate/all', [
-                'project'  => config('pakasir.slug'),
+            $response = Http::timeout(10)->post('https://app.pakasir.com/api/transactioncreate/qris', [
+                'project'  => $slug,
                 'order_id' => $orderId,
                 'amount'   => $amount,
                 'api_key'  => config('pakasir.api_key'),
             ]);
 
-            $result = $response->json();
-
-            if (!$response->successful() || !$result || !isset($result['payment'])) {
-                $errMsg = $result['message'] ?? 'Response tidak valid dari Pakasir';
-                throw new \Exception($errMsg);
+            if ($response->successful()) {
+                $result = $response->json();
+                $apiData = $result['payment'] ?? [];
+                if ($apiData) {
+                    $paymentData = array_merge($paymentData, $apiData);
+                }
+            } else {
+                Log::warning('Pakasir API warning: ' . $response->body());
             }
-
-            $paymentData = $result['payment'];
-            $paymentUrl  = $paymentData['payment_url'] ?? null;
-
-            if (!$paymentUrl) {
-                throw new \Exception('Pakasir tidak mengembalikan payment_url');
-            }
-
         } catch (\Exception $e) {
-            Log::warning('Pakasir createTransaction error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal terhubung ke server pembayaran. Silakan coba lagi.',
-            ], 502);
+            // API gagal — tetap lanjut pake payment_url lokal
+            Log::warning('Pakasir API call failed (using local payment_url): ' . $e->getMessage());
         }
 
         Payment::updateOrCreate(
@@ -112,8 +119,9 @@ class PaymentController extends Controller
         return response()->json([
             'success' => true,
             'data'    => [
-                'payment_url' => $paymentUrl,
-                'order_id'    => $orderId,
+                'payment_url'  => $paymentUrl,
+                'order_id'     => $orderId,
+                'payment_number' => $paymentData['payment_number'] ?? null,
             ],
         ]);
     }

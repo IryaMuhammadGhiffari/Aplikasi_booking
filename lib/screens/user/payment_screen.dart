@@ -311,7 +311,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
-    final snapUrl = data['snap_url'] as String?;
+    final snapUrl = data['payment_url'] as String?;
     if (snapUrl == null) return;
 
     setState(() {
