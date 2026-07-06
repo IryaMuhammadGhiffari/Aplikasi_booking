@@ -153,6 +153,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         // Menu drawer
         _drawerItem(Icons.content_cut, 'Kelola Barber',
             () => Navigator.pushNamed(context, AppRoutes.adminBarbers)),
+        Consumer<AdminRefundProvider>(
+          builder: (_, refProvider, __) {
+            final count = refProvider.pendingCount;
+            return _drawerItem(
+              Icons.replay,
+              count > 0 ? 'Pengajuan Refund ($count)' : 'Pengajuan Refund',
+              () {
+                Navigator.pop(context);
+                _tabController.animateTo(4);
+              },
+              trailing: count > 0
+                  ? Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text('$count',
+                          style: GoogleFonts.poppins(
+                              color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                    )
+                  : null,
+            );
+          },
+        ),
         _drawerItem(Icons.bar_chart, 'Laporan Pendapatan',
             () => Navigator.pushNamed(context, AppRoutes.adminTrx)),
 
@@ -164,12 +189,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _drawerItem(IconData icon, String label, VoidCallback onTap,
-      {Color? color}) {
+      {Color? color, Widget? trailing}) {
     return ListTile(
       leading: Icon(icon, color: color ?? AppColors.lightGrey),
       title: Text(label,
           style: GoogleFonts.poppins(
               color: color ?? AppColors.white, fontSize: 14)),
+      trailing: trailing,
       onTap: onTap,
     );
   }
@@ -312,6 +338,54 @@ class _HomeTabState extends State<_HomeTab> {
                   style:
                       GoogleFonts.poppins(color: AppColors.grey, fontSize: 10)),
             ]),
+          ),
+
+          // Pending refund strip notification
+          Consumer<AdminRefundProvider>(
+            builder: (_, refProvider, __) {
+              final pendingCount = refProvider.pendingCount;
+              if (pendingCount <= 0) return const SliverToBoxAdapter();
+
+              return SliverToBoxAdapter(
+                child: GestureDetector(
+                  onTap: () => _tabController.animateTo(4),
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.replay, color: AppColors.error, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: RichText(
+                          text: TextSpan(
+                            style: GoogleFonts.poppins(fontSize: 12),
+                            children: [
+                              TextSpan(
+                                text: '$pendingCount pengajuan refund',
+                                style: const TextStyle(
+                                  color: AppColors.error,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const TextSpan(
+                                text: '  —  Ketuk untuk lihat',
+                                style: TextStyle(color: AppColors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: AppColors.grey, size: 18),
+                    ]),
+                  ),
+                ),
+              );
+            },
           ),
 
           SliverPadding(

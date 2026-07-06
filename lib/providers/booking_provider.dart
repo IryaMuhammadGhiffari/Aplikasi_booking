@@ -178,10 +178,10 @@ class BookingProvider with ChangeNotifier {
 
   // ── CANCEL / RESCHEDULE ─────────────────────────────────
 
-  Future<bool> cancelBooking(int bookingId) async {
+  Future<bool> cancelBooking(int bookingId, {String? cancelReason}) async {
     _error = null;
     try {
-      await _api.cancelBooking(bookingId);
+      await _api.cancelBooking(bookingId, cancelReason: cancelReason);
       await fetchMyBookings();
       return true;
     } on DioException catch (e) {

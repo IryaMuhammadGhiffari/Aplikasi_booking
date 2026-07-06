@@ -137,6 +137,17 @@ class BookingController extends Controller
             ], 422);
         }
 
+        // Validasi alasan cancel wajib kalau sudah bayar
+        $cancelReason = $request->string('cancel_reason')->trim();
+        if ($booking->payment && $booking->payment->status === 'paid') {
+            if ($cancelReason->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Alasan pembatalan wajib diisi untuk booking yang sudah dibayar.',
+                ], 422);
+            }
+        }
+
         // Minimal 6 jam sebelum jadwal — DISABLED sementara karena server clock Render off by ~1 tahun
         // $bookingDateStr = $booking->booking_date->format('Y-m-d');
         // $bookingTimeStr = $booking->booking_time;
@@ -171,7 +182,10 @@ class BookingController extends Controller
                 $refunded = true; // pending tidak perlu refund
             } elseif ($booking->payment->status === 'paid') {
                 // Pakasir tidak support refund — set refund_pending (manual)
-                $booking->payment->update(['status' => 'refund_pending']);
+                $booking->payment->update([
+                    'status'         => 'refund_pending',
+                    'cancel_reason'  => $cancelReason->toString(),
+                ]);
                 $refundMessage = 'Pakasir tidak mendukung refund otomatis. Hubungi admin untuk pengembalian dana.';
             }
         }

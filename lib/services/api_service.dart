@@ -98,7 +98,13 @@ class ApiService {
   Future<Response> getBooking(int id) => _dio.get('/bookings/$id');
   Future<Response> createBooking(Map<String, dynamic> d) =>
       _dio.post('/bookings', data: d);
-  Future<Response> cancelBooking(int id) => _dio.patch('/bookings/$id/cancel');
+  Future<Response> cancelBooking(int id, {String? cancelReason}) {
+    final data = <String, dynamic>{};
+    if (cancelReason != null && cancelReason.isNotEmpty) {
+      data['cancel_reason'] = cancelReason;
+    }
+    return _dio.patch('/bookings/$id/cancel', data: data);
+  }
   Future<Response> rescheduleBooking(int id, Map<String, dynamic> d) =>
       _dio.patch('/bookings/$id/reschedule', data: d);
   Future<Response> adminGetBookings({String? status, String? date}) {

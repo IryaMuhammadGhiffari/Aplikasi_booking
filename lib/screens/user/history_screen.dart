@@ -368,37 +368,46 @@ class _HistoryCardState extends State<_HistoryCard> {
 
   Future<void> _cancel() async {
     final isPaid = widget.booking.isPaid;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('Batalkan Booking?'),
-        content: Text(isPaid
-            ? 'Booking sudah dibayar. Dana akan dikembalikan (refund). Lanjutkan?'
-            : 'Booking yang dibatalkan tidak dapat dikembalikan.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Tidak')),
-          TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Ya, Batalkan',
-                  style: TextStyle(color: AppColors.error))),
-        ],
-      ),
-    );
+    String? cancelReason;
 
-    if (ok != true || !mounted) return;
+    if (isPaid) {
+      final result = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (ctx) => _CancelWithReasonDialog(),
+      );
+      if (result == null || !mounted) return;
+      cancelReason = result['reason'] as String?;
+    } else {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Batalkan Booking?'),
+          content: const Text('Booking yang dibatalkan tidak dapat dikembalikan.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Tidak')),
+            TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Ya, Batalkan',
+                    style: TextStyle(color: AppColors.error))),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+    }
 
     setState(() => _loadingCancel = true);
     final provider = context.read<BookingProvider>();
-    final success = await provider.cancelBooking(widget.booking.id);
+    final success = await provider.cancelBooking(widget.booking.id,
+        cancelReason: cancelReason);
     if (!mounted) return;
     setState(() => _loadingCancel = false);
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(success
-          ? (widget.booking.isPaid
+          ? (isPaid
               ? 'Booking dibatalkan. Dana akan dikembalikan.'
               : 'Booking berhasil dibatalkan')
           : provider.error ?? 'Gagal membatalkan'),
@@ -416,5 +425,85 @@ class _HistoryCardState extends State<_HistoryCard> {
       ),
     );
     widget.onRefresh();
+  }
+}
+
+/// Dialog alasan pembatalan — wajib diisi untuk booking yang sudah dibayar.
+class _CancelWithReasonDialog extends StatefulWidget {
+  @override
+  State<_CancelWithReasonDialog> createState() =>
+      _CancelWithReasonDialogState();
+}
+
+class _CancelWithReasonDialogState extends State<_CancelWithReasonDialog> {
+  final _controller = TextEditingController();
+  bool _submitted = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text('Batalkan Booking?',
+          style: GoogleFonts.poppins(
+              color: AppColors.white, fontWeight: FontWeight.bold)),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text('Booking sudah dibayar. Dana akan dikembalikan (refund).',
+            style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 13)),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _controller,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: 'Alasan pembatalan (wajib) *',
+            hintStyle: GoogleFonts.poppins(color: AppColors.grey, fontSize: 13),
+            filled: true,
+            fillColor: AppColors.background,
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: AppColors.secondary, width: 1.5)),
+            errorText: _submitted && _controller.text.trim().isEmpty
+                ? 'Alasan wajib diisi'
+                : null,
+            errorStyle: GoogleFonts.poppins(color: AppColors.error, fontSize: 11),
+          ),
+          style: GoogleFonts.poppins(color: AppColors.white, fontSize: 13),
+          textCapitalization: TextCapitalization.sentences,
+        ),
+      ]),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Tidak',
+              style: GoogleFonts.poppins(color: AppColors.grey)),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final reason = _controller.text.trim();
+            if (reason.isEmpty) {
+              setState(() => _submitted = true);
+              return;
+            }
+            Navigator.pop(context, {'reason': reason});
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.error,
+            foregroundColor: Colors.white,
+          ),
+          child: Text('Ya, Batalkan',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        ),
+      ],
+    );
   }
 }

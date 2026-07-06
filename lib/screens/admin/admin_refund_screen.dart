@@ -230,6 +230,12 @@ class _AdminRefundScreenState extends State<AdminRefundScreen> {
                           _infoItem(Icons.payments_outlined, 'Dibayar pada',
                               (r['paid_at'] as String).formattedDate),
                         ],
+                        if (r['cancel_reason'] != null &&
+                            (r['cancel_reason'] as String).isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          _infoItem(Icons.info_outline, 'Alasan pembatalan',
+                              r['cancel_reason']),
+                        ],
                         const SizedBox(height: 10),
                         SizedBox(
                           width: double.infinity,

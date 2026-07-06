@@ -334,7 +334,7 @@ class PaymentController extends Controller
                 'booking.barber'  => fn ($q) => $q->select('barbers.id', 'barbers.name'),
             ])
             ->where('status', 'refund_pending')
-            ->select('id', 'booking_id', 'order_id', 'transaction_id', 'amount', 'payment_method', 'status', 'paid_at', 'created_at')
+            ->select('id', 'booking_id', 'order_id', 'transaction_id', 'amount', 'payment_method', 'status', 'cancel_reason', 'paid_at', 'created_at')
             ->orderByDesc('created_at')
             ->get();
 
