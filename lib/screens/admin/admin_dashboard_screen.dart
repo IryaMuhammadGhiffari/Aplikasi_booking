@@ -30,12 +30,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       drawer: _buildDrawer(),
       body: IndexedStack(
         index: _tab,
-        children: const [
-          _HomeTab(),
-          AdminBookingsScreen(),
-          AdminServicesScreen(),
-          AdminTransactionsScreen(),
-          AdminRefundScreen(),
+        children: [
+          _HomeTab(onNavigateToRefund: () => setState(() => _tab = 4)),
+          const AdminBookingsScreen(),
+          const AdminServicesScreen(),
+          const AdminTransactionsScreen(),
+          const AdminRefundScreen(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -161,7 +161,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               count > 0 ? 'Pengajuan Refund ($count)' : 'Pengajuan Refund',
               () {
                 Navigator.pop(context);
-                _tabController.animateTo(4);
+                setState(() => _tab = 4);
               },
               trailing: count > 0
                   ? Container(
@@ -210,11 +210,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 // Tab Dashboard Utama
 // ════════════════════════════════════════════════════════════════
 class _HomeTab extends StatefulWidget {
-  const _HomeTab();
+  final VoidCallback? onNavigateToRefund;
+  const _HomeTab({this.onNavigateToRefund});
+
   @override
   State<_HomeTab> createState() => _HomeTabState();
 }
-
 class _HomeTabState extends State<_HomeTab> {
   Timer? _pollTimer;
   int _prevPaymentCount = 0;
@@ -348,7 +349,7 @@ class _HomeTabState extends State<_HomeTab> {
 
               return SliverToBoxAdapter(
                 child: GestureDetector(
-                  onTap: () => _tabController.animateTo(4),
+                  onTap: widget.onNavigateToRefund,
                   child: Container(
                     margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
