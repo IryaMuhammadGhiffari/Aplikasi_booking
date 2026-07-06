@@ -418,10 +418,15 @@ class _HistoryCardState extends State<_HistoryCard> {
   }
 
   Future<void> _bayar() async {
+    // Refresh dulu biar dapat status terbaru (misal admin sudah klik Mulai Layanan)
+    await context.read<BookingProvider>().fetchMyBookings();
+    if (!mounted) return;
+    final updated = context.read<BookingProvider>().bookings
+        .firstWhere((b) => b.id == widget.booking.id, orElse: () => widget.booking);
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => PaymentScreen(booking: widget.booking),
+        builder: (_) => PaymentScreen(booking: updated),
       ),
     );
     widget.onRefresh();

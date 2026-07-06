@@ -428,7 +428,7 @@ class _BookingAdminCard extends StatelessWidget {
                 ? const Text('Memproses...',
                     style: TextStyle(color: Colors.white))
                 : Text(canComplete ? 'Selesaikan' : 'Belum dibayar',
-                    style: TextStyle(color: Colors.white)),
+                    style: const TextStyle(color: Colors.white)),
             style: ElevatedButton.styleFrom(
               backgroundColor: canComplete ? AppColors.success : AppColors.grey,
               shape: RoundedRectangleBorder(
