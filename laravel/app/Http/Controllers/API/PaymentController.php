@@ -68,9 +68,9 @@ class PaymentController extends Controller
         $amount  = (int) $booking->total_price;
         $slug    = config('pakasir.slug');
 
-        // Payment URL digenerate lokal (Pakasir API tidak mengembalikan payment_url)
+        // Payment URL digenerate lokal — tanpa qris_only biar muncul semua metode
         $paymentUrl = 'https://app.pakasir.com/pay/' . $slug . '/' . $amount
-            . '?order_id=' . urlencode($orderId) . '&qris_only=1';
+            . '?order_id=' . urlencode($orderId);
 
         // Data default (dipakai kalau API call gagal)
         $paymentData = [
