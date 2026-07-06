@@ -169,7 +169,7 @@ class ReportExporter {
         build: (context) => [
           pw.Text(
             'Laporan Transaksi',
-            style: const pw.TextStyle(
+            style: pw.TextStyle(
               fontSize: 18,
               fontWeight: pw.FontWeight.bold,
             ),
@@ -198,7 +198,7 @@ class ReportExporter {
                   ),
                 ];
               }).toList(),
-              headerStyle: const pw.TextStyle(
+              headerStyle: pw.TextStyle(
                 fontWeight: pw.FontWeight.bold,
                 fontSize: 9,
               ),
@@ -244,7 +244,7 @@ class ReportExporter {
         build: (context) => [
           pw.Text(
             'Laporan Pendapatan',
-            style: const pw.TextStyle(
+            style: pw.TextStyle(
               fontSize: 18,
               fontWeight: pw.FontWeight.bold,
             ),
@@ -257,7 +257,7 @@ class ReportExporter {
           pw.SizedBox(height: 8),
           pw.Text(
             'Periodo: $startStr — $endStr',
-            style: const pw.TextStyle(
+            style: pw.TextStyle(
               fontSize: 11,
               fontWeight: pw.FontWeight.bold,
             ),
@@ -275,7 +275,7 @@ class ReportExporter {
             ),
             child: pw.Text(
               'Total Pendapatan: ${_rp(totalRevenue)}',
-              style: const pw.TextStyle(
+              style: pw.TextStyle(
                 fontSize: 14,
                 fontWeight: pw.FontWeight.bold,
               ),
@@ -296,7 +296,7 @@ class ReportExporter {
                     ],
                   )
                   .toList(),
-              headerStyle: const pw.TextStyle(
+              headerStyle: pw.TextStyle(
                 fontWeight: pw.FontWeight.bold,
                 fontSize: 10,
               ),
