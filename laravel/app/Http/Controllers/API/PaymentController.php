@@ -29,7 +29,7 @@ class PaymentController extends Controller
             ->where('user_id', $request->user()->id)
             ->findOrFail($bookingId);
 
-        if ($booking->status !== 'confirmed') {
+        if ($booking->status !== 'confirmed' && $booking->status !== 'in_progress') {
             return response()->json([
                 'success' => false,
                 'message' => 'Booking belum dikonfirmasi admin. Silakan tunggu konfirmasi terlebih dahulu.',
