@@ -14,17 +14,29 @@ class AdminRefundScreen extends StatefulWidget {
   State<AdminRefundScreen> createState() => _AdminRefundScreenState();
 }
 
-class _AdminRefundScreenState extends State<AdminRefundScreen> {
+class _AdminRefundScreenState extends State<AdminRefundScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AdminRefundProvider>().fetchRefunds();
+      context.read<AdminRefundProvider>().fetchRefundHistory();
     });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _refresh() async {
     await context.read<AdminRefundProvider>().fetchRefunds();
+    await context.read<AdminRefundProvider>().fetchRefundHistory();
   }
 
   Future<void> _approve(int id) async {
@@ -73,175 +85,220 @@ class _AdminRefundScreenState extends State<AdminRefundScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Refund'),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppColors.secondary,
+          labelColor: AppColors.secondary,
+          unselectedLabelColor: AppColors.grey,
+          tabs: const [
+            Tab(text: 'Pending'),
+            Tab(text: 'Riwayat'),
+          ],
+        ),
       ),
-      body: Consumer<AdminRefundProvider>(
-        builder: (_, provider, __) {
-          if (provider.isLoading && provider.refunds.isEmpty) {
-            return const ShimmerList(
-              itemBuilder: ShimmerAdminCard.new,
-              count: 3,
-            );
-          }
-          if (provider.error != null && provider.refunds.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.check_circle_outline,
-                        color: AppColors.grey, size: 56),
-                    const SizedBox(height: 12),
-                    Text('Tidak ada refund pending',
-                        style: GoogleFonts.poppins(
-                            color: AppColors.grey, fontSize: 14)),
-                  ],
-                ),
-              ),
-            );
-          }
-          if (provider.refunds.isEmpty) {
-            return Center(
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildList(isPending: true),
+          _buildList(isPending: false),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildList({required bool isPending}) {
+    return Consumer<AdminRefundProvider>(
+      builder: (_, provider, __) {
+        final list = isPending ? provider.pendingRefunds : provider.historyRefunds;
+        final isLoading = provider.isLoading && list.isEmpty;
+
+        if (isLoading) {
+          return const ShimmerList(
+            itemBuilder: ShimmerAdminCard.new,
+            count: 3,
+          );
+        }
+        if (provider.error != null && list.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.check_circle_outline,
                       color: AppColors.grey, size: 56),
                   const SizedBox(height: 12),
-                  Text('Semua refund sudah selesai',
+                  Text(isPending
+                      ? 'Tidak ada refund pending'
+                      : 'Belum ada riwayat refund',
                       style: GoogleFonts.poppins(
                           color: AppColors.grey, fontSize: 14)),
                 ],
               ),
-            );
-          }
-          return RefreshIndicator(
-            color: AppColors.secondary,
-            onRefresh: _refresh,
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: provider.refunds.length,
-              itemBuilder: (_, i) {
-                final r = provider.refunds[i];
-                final booking = r['booking'] as Map?;
-                final user = booking?['user'] as Map?;
-                final userName = user?['name'] ?? '-';
-                final amount = double.parse(r['amount'].toString());
-                final orderId = r['order_id'] ?? '-';
-                final date = (r['created_at'] as String?)?.formattedDate ?? '-';
-                final services = booking?['services'] as List?;
-                final service = (services != null && services.isNotEmpty)
-                    ? services.map((s) => s['name']).join(', ')
-                    : '-';
+            ),
+          );
+        }
+        if (list.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle_outline,
+                    color: AppColors.grey, size: 56),
+                const SizedBox(height: 12),
+                Text(isPending
+                    ? 'Semua refund sudah selesai'
+                    : 'Belum ada riwayat refund',
+                    style: GoogleFonts.poppins(
+                        color: AppColors.grey, fontSize: 14)),
+              ],
+            ),
+          );
+        }
+        return RefreshIndicator(
+          color: AppColors.secondary,
+          onRefresh: _refresh,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: list.length,
+            itemBuilder: (_, i) {
+              final r = list[i];
+              final booking = r['booking'] as Map?;
+              final user = booking?['user'] as Map?;
+              final userName = user?['name'] ?? '-';
+              final amount = double.parse(r['amount'].toString());
+              final orderId = r['order_id'] ?? '-';
+              final date = (r['created_at'] as String?)?.formattedDate ?? '-';
+              final services = booking?['services'] as List?;
+              final service = (services != null && services.isNotEmpty)
+                  ? services.map((s) => s['name']).join(', ')
+                  : '-';
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: AppColors.error.withOpacity(0.3)),
-                  ),
-                  child: Column(children: [
-                    // Header
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withOpacity(0.08),
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16)),
-                      ),
-                      child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(children: [
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: AppColors.error.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                    Icons.replay_outlined,
-                                    color: AppColors.error,
-                                    size: 18),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: isPending
+                          ? AppColors.error.withOpacity(0.3)
+                          : AppColors.success.withOpacity(0.3)),
+                ),
+                child: Column(children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isPending
+                          ? AppColors.error.withOpacity(0.08)
+                          : AppColors.success.withOpacity(0.08),
+                      borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(16)),
+                    ),
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: isPending
+                                    ? AppColors.error.withOpacity(0.15)
+                                    : AppColors.success.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              const SizedBox(width: 10),
-                              Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(userName,
-                                        style: GoogleFonts.poppins(
-                                            color: AppColors.white,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13)),
-                                    Text(orderId,
-                                        style: GoogleFonts.poppins(
-                                            color: AppColors.grey,
-                                            fontSize: 10)),
-                                  ]),
-                            ]),
+                              child: Icon(
+                                  isPending
+                                      ? Icons.replay_outlined
+                                      : Icons.check_circle_outline,
+                                  color: isPending
+                                      ? AppColors.error
+                                      : AppColors.success,
+                                  size: 18),
+                            ),
+                            const SizedBox(width: 10),
                             Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(amount.toRupiah,
+                                  Text(userName,
                                       style: GoogleFonts.poppins(
-                                          color: AppColors.error,
-                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.white,
+                                          fontWeight: FontWeight.w600,
                                           fontSize: 13)),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.error.withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text('Refund',
-                                        style: GoogleFonts.poppins(
-                                            color: AppColors.error,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold)),
-                                  ),
+                                  Text(orderId,
+                                      style: GoogleFonts.poppins(
+                                          color: AppColors.grey,
+                                          fontSize: 10)),
                                 ]),
                           ]),
-                    ),
-                    // Body
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-                      child: Column(children: [
-                        Row(children: [
-                          Expanded(
-                            child: _infoItem(
-                                Icons.content_cut, 'Layanan', service),
-                          ),
-                          const SizedBox(width: 8),
+                          Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(amount.toRupiah,
+                                    style: GoogleFonts.poppins(
+                                        color: isPending
+                                            ? AppColors.error
+                                            : AppColors.success,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13)),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: isPending
+                                        ? AppColors.error.withOpacity(0.15)
+                                        : AppColors.success.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(isPending ? 'Pending' : 'Selesai',
+                                      style: GoogleFonts.poppins(
+                                          color: isPending
+                                              ? AppColors.error
+                                              : AppColors.success,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                              ]),
                         ]),
+                  ),
+                  // Body
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                    child: Column(children: [
+                      Row(children: [
+                        Expanded(
+                          child: _infoItem(
+                              Icons.content_cut, 'Layanan', service),
+                        ),
+                        const SizedBox(width: 8),
+                      ]),
+                      const SizedBox(height: 6),
+                      Row(children: [
+                        Expanded(
+                          child: _infoItem(
+                              Icons.calendar_today, 'Tanggal', date),
+                        ),
+                      ]),
+                      if (r['paid_at'] != null) ...[
                         const SizedBox(height: 6),
-                        Row(children: [
-                          Expanded(
-                            child: _infoItem(
-                                Icons.calendar_today, 'Tanggal', date),
-                          ),
-                        ]),
-                        if (r['paid_at'] != null) ...[
-                          const SizedBox(height: 6),
-                          _infoItem(Icons.payments_outlined, 'Dibayar pada',
-                              (r['paid_at'] as String).formattedDate),
-                        ],
-                        if (r['cancel_reason'] != null &&
-                            (r['cancel_reason'] as String).isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          _infoItem(Icons.info_outline, 'Alasan pembatalan',
-                              r['cancel_reason']),
-                        ],
-                        if (r['admin_note'] != null &&
-                            (r['admin_note'] as String).isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          _infoItem(Icons.notes, 'Catatan admin',
-                              r['admin_note']),
-                        ],
+                        _infoItem(Icons.payments_outlined, 'Dibayar pada',
+                            (r['paid_at'] as String).formattedDate),
+                      ],
+                      if (r['cancel_reason'] != null &&
+                          (r['cancel_reason'] as String).isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _infoItem(Icons.info_outline, 'Alasan pembatalan',
+                            r['cancel_reason']),
+                      ],
+                      if (r['admin_note'] != null &&
+                          (r['admin_note'] as String).isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _infoItem(Icons.notes, 'Catatan admin',
+                            r['admin_note']),
+                      ],
+                      if (isPending) ...[
                         const SizedBox(height: 10),
                         SizedBox(
                           width: double.infinity,
@@ -263,15 +320,15 @@ class _AdminRefundScreenState extends State<AdminRefundScreen> {
                             ),
                           ),
                         ),
-                      ]),
-                    ),
-                  ]),
-                );
-              },
-            ),
-          );
-        },
-      ),
+                      ],
+                    ]),
+                  ),
+                ]),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 

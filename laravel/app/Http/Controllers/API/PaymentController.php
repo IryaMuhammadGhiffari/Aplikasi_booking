@@ -344,6 +344,25 @@ class PaymentController extends Controller
         ]);
     }
 
+    public function adminRefundHistory()
+    {
+        $payments = Payment::with([
+                'booking'         => fn ($q) => $q->select('id', 'booking_code', 'user_id', 'barber_id', 'booking_date', 'booking_time', 'total_price', 'status', 'created_at'),
+                'booking.user'    => fn ($q) => $q->select('id', 'name', 'email', 'email', 'phone'),
+                'booking.services'=> fn ($q) => $q->select('services.id', 'services.name', 'services.price'),
+                'booking.barber'  => fn ($q) => $q->select('barbers.id', 'barbers.name'),
+            ])
+            ->where('status', 'refunded')
+            ->select('id', 'booking_id', 'order_id', 'transaction_id', 'amount', 'payment_method', 'status', 'cancel_reason', 'admin_note', 'paid_at', 'created_at')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $payments,
+        ]);
+    }
+
     public function approveRefund(Request $request, $id)
     {
         $request->validate([

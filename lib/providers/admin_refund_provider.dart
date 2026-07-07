@@ -7,14 +7,16 @@ import '../utils/api_list_helper.dart';
 class AdminRefundProvider with ChangeNotifier {
   final _api = ApiService();
 
-  List _refunds = [];
+  List _pendingRefunds = [];
+  List _historyRefunds = [];
   bool _isLoading = false;
   String? _error;
 
-  List get refunds => _refunds;
+  List get pendingRefunds => _pendingRefunds;
+  List get historyRefunds => _historyRefunds;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  int get pendingCount => _refunds.length;
+  int get pendingCount => _pendingRefunds.length;
 
   Future<void> fetchRefunds() async {
     _error = null;
@@ -23,14 +25,35 @@ class AdminRefundProvider with ChangeNotifier {
 
     try {
       final res = await _api.adminGetRefunds();
-      _refunds = apiDataAsList(res.data['data']);
+      _pendingRefunds = apiDataAsList(res.data['data']);
       _error = null;
     } catch (e) {
       String msg = 'Gagal memuat daftar refund';
       if (e is DioException) {
         msg = e.response?.data?['message'] ?? msg;
       }
-      if (_refunds.isEmpty) _error = msg;
+      if (_pendingRefunds.isEmpty) _error = msg;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchRefundHistory() async {
+    _error = null;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final res = await _api.adminGetRefundHistory();
+      _historyRefunds = apiDataAsList(res.data['data']);
+      _error = null;
+    } catch (e) {
+      String msg = 'Gagal memuat riwayat refund';
+      if (e is DioException) {
+        msg = e.response?.data?['message'] ?? msg;
+      }
+      if (_historyRefunds.isEmpty) _error = msg;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -40,7 +63,13 @@ class AdminRefundProvider with ChangeNotifier {
   Future<bool> approveRefund(int id, {String? adminNote}) async {
     try {
       await _api.approveRefund(id, adminNote: adminNote);
-      _refunds.removeWhere((r) => r['id'] == id);
+      // Move from pending to history
+      final idx = _pendingRefunds.indexWhere((r) => r['id'] == id);
+      if (idx != -1) {
+        final item = _pendingRefunds.removeAt(idx);
+        item['status'] = 'refunded';
+        _historyRefunds.insert(0, item);
+      }
       notifyListeners();
       return true;
     } catch (e) {
