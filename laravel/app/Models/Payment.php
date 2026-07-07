@@ -15,6 +15,8 @@ class Payment extends Model
         'status',
         'payment_url',
         'paid_at',
+        'cancel_reason',
+        'admin_note',
     ];
 
     protected $casts = [

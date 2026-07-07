@@ -28,8 +28,7 @@ class _AdminRefundScreenState extends State<AdminRefundScreen> {
   }
 
   Future<void> _approve(int id) async {
-    final noteController = TextEditingController();
-    final result = await showDialog<String>(
+    final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
@@ -37,32 +36,10 @@ class _AdminRefundScreenState extends State<AdminRefundScreen> {
         title: Text('Konfirmasi Refund',
             style: GoogleFonts.poppins(
                 color: AppColors.white, fontWeight: FontWeight.bold)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(
-            'Pastikan kamu sudah melakukan refund manual di dashboard Pakasir.',
-            style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 13),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: noteController,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: 'Catatan admin (opsional)',
-              hintStyle: GoogleFonts.poppins(color: AppColors.grey, fontSize: 13),
-              filled: true,
-              fillColor: AppColors.background,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: AppColors.secondary, width: 1.5)),
-            ),
-            style: GoogleFonts.poppins(color: AppColors.white, fontSize: 13),
-            textCapitalization: TextCapitalization.sentences,
-          ),
-        ]),
+        content: Text(
+          'Pastikan kamu sudah melakukan refund manual di dashboard Pakasir.',
+          style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 13),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -70,7 +47,7 @@ class _AdminRefundScreenState extends State<AdminRefundScreen> {
                 style: GoogleFonts.poppins(color: AppColors.grey)),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, noteController.text.trim()),
+            onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
             ),
@@ -79,8 +56,8 @@ class _AdminRefundScreenState extends State<AdminRefundScreen> {
         ],
       ),
     );
-    if (result == null || !mounted) return;
-    await context.read<AdminRefundProvider>().approveRefund(id, adminNote: result);
+    if (ok != true || !mounted) return;
+    await context.read<AdminRefundProvider>().approveRefund(id);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('Refund berhasil dikonfirmasi',
