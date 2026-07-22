@@ -76,10 +76,12 @@ extension DateFormatExt on String {
     }
   }
 
-  /// "2024-03-15T10:30:00" → "15 Mar 2024, 10:30"
+  /// "2026-07-22T11:19:58.000000Z" → "22 Jul 2026, 11:19"
   String get formattedDateTime {
     try {
-      final d = DateTime.parse(this);
+      // Hapus timezone (Z, +07:00) biar DateTime.parse pake local time
+      final clean = replaceAll(RegExp(r'[Zz](.*)?$|\.\d+'), '');
+      final d = DateTime.parse(clean);
       final hour = d.hour.toString().padLeft(2, '0');
       final minute = d.minute.toString().padLeft(2, '0');
       return '${d.day} ${_monthsIndo[d.month - 1]} ${d.year}, $hour:$minute';
