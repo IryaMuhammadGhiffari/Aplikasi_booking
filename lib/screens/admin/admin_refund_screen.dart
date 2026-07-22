@@ -36,39 +36,12 @@ class _AdminRefundScreenState extends State<AdminRefundScreen>
 
   Future<void> _refresh() async {
     await context.read<AdminRefundProvider>().fetchRefunds();
+    // ignore: use_build_context_synchronously
     await context.read<AdminRefundProvider>().fetchRefundHistory();
   }
 
   Future<void> _approve(int id) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Konfirmasi Refund',
-            style: GoogleFonts.poppins(
-                color: AppColors.white, fontWeight: FontWeight.bold)),
-        content: Text(
-          'Pastikan kamu sudah melakukan refund manual di dashboard Pakasir.',
-          style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Batal',
-                style: GoogleFonts.poppins(color: AppColors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-            ),
-            child: const Text('Sudah Direfund'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
+    if (!mounted) return;
     await context.read<AdminRefundProvider>().approveRefund(id);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
