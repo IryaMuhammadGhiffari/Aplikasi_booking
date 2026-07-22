@@ -26,6 +26,7 @@ class _AdminRefundScreenState extends State<AdminRefundScreen> {
 
   Future<void> _refresh() async {
     await context.read<AdminRefundProvider>().fetchRefunds();
+    // ignore: use_build_context_synchronously
     await context.read<AdminRefundProvider>().fetchRefundHistory();
   }
 

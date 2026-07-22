@@ -551,7 +551,8 @@ class _TrxCard extends StatelessWidget {
         ? (booking?['booking_time'] as String).substring(0, 5)
         : '';
     final paidAtStr = t['paid_at'] as String?;
-    final paidAt = paidAtStr?.formattedDate;
+    final paidAt = paidAtStr?.formattedDateTime;
+    final createdAt = (t['created_at'] as String?)?.formattedDateTime;
     final method = t['payment_method'] as String?;
     final isCashless = method == 'cashless';
 
@@ -660,8 +661,12 @@ class _TrxCard extends StatelessWidget {
               Expanded(child: _infoItem(Icons.calendar_today, 'Tanggal', date)),
               Expanded(child: _infoItem(Icons.access_time, 'Pukul', time)),
             ]),
+            if (createdAt != null) ...[
+              const SizedBox(height: 6),
+              _infoItem(Icons.schedule, 'Transaksi dibuat', createdAt),
+            ],
             if (paidAt != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               _infoItem(Icons.payments_outlined, 'Dibayar pada', paidAt),
             ],
             if (t['payment_method'] != null) ...[

@@ -218,6 +218,7 @@ class _BookingAdminCard extends StatelessWidget {
     final status = booking['status'] as String;
     final dateStr = booking['booking_date'] as String? ?? '';
     final timeStr = (booking['booking_time'] as String? ?? '').shortTime;
+    final createdAt = (booking['created_at'] as String?)?.formattedDateTime;
     final price =
         double.tryParse(booking['total_price']?.toString() ?? '0') ?? 0;
     final statusInfo = _statusInfo(status);
@@ -293,6 +294,10 @@ class _BookingAdminCard extends StatelessWidget {
                       Icons.calendar_today, 'Tanggal', dateStr.formattedDate)),
               Expanded(child: _infoItem(Icons.access_time, 'Pukul', timeStr)),
             ]),
+            if (createdAt != null) ...[
+              const SizedBox(height: 6),
+              _infoItem(Icons.schedule, 'Dibuat pada', createdAt),
+            ],
             const SizedBox(height: 8),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text('Total',
