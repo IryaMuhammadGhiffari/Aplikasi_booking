@@ -552,7 +552,6 @@ class _TrxCard extends StatelessWidget {
         : '';
     final paidAtStr = t['paid_at'] as String?;
     final paidAt = paidAtStr?.formattedDateTime;
-    final createdAt = (t['created_at'] as String?)?.formattedDateTime;
     final method = t['payment_method'] as String?;
     final isCashless = method == 'cashless';
 
@@ -647,15 +646,14 @@ class _TrxCard extends StatelessWidget {
           ]),
         ),
 
-        // Timestamp
-        if (createdAt != null)
-          Container(
+        // Waktu booking (dari input user — akurat)
+        Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
             child: Row(children: [
-              const Icon(Icons.schedule, color: AppColors.grey, size: 11),
+              const Icon(Icons.calendar_month, color: AppColors.grey, size: 11),
               const SizedBox(width: 4),
-              Text(createdAt,
+              Text('$date, $time',
                   style: GoogleFonts.poppins(
                       color: AppColors.grey, fontSize: 10)),
             ]),

@@ -226,7 +226,6 @@ class _BookingAdminCard extends StatelessWidget {
     final status = booking['status'] as String;
     final dateStr = booking['booking_date'] as String? ?? '';
     final timeStr = (booking['booking_time'] as String? ?? '').shortTime;
-    final createdAt = (booking['created_at'] as String?)?.formattedDateTime;
     final price =
         double.tryParse(booking['total_price']?.toString() ?? '0') ?? 0;
     final statusInfo = _statusInfo(status);
@@ -276,18 +275,17 @@ class _BookingAdminCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Timestamp
-            if (createdAt != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(children: [
-                  const Icon(Icons.schedule, color: AppColors.grey, size: 11),
-                  const SizedBox(width: 4),
-                  Text(createdAt,
-                      style: GoogleFonts.poppins(
-                          color: AppColors.grey, fontSize: 10)),
-                ]),
-              ),
+            // Waktu booking (dari input user — akurat)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(children: [
+                const Icon(Icons.calendar_month, color: AppColors.grey, size: 11),
+                const SizedBox(width: 4),
+                Text('${dateStr.formattedDate}, $timeStr',
+                    style: GoogleFonts.poppins(
+                        color: AppColors.grey, fontSize: 10)),
+              ]),
+            ),
             Row(children: [
               const Icon(Icons.person, color: AppColors.secondary, size: 16),
               const SizedBox(width: 6),
