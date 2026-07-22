@@ -547,11 +547,12 @@ class _TrxCard extends StatelessWidget {
         : (booking?['service']?['name'] ?? '-');
     final barber = booking?['barber']?['name'] ?? '-';
     final date = (booking?['booking_date'] as String?)?.formattedDate ?? '-';
-    final time = (booking?['booking_time'] as String? ?? '').length >= 5
-        ? (booking?['booking_time'] as String).substring(0, 5)
-        : '';
+    final rawTime = booking?['booking_time'] as String? ?? '';
+    final time = rawTime.length >= 5 ? '${rawTime.substring(0, 5)} WIB' : '-';
     final paidAtStr = t['paid_at'] as String?;
-    final paidAt = paidAtStr?.formattedDateTime;
+    final paidAt = paidAtStr != null
+        ? '${paidAtStr.formattedDateTime} WIB'
+        : null;
     final method = t['payment_method'] as String?;
     final isCashless = method == 'cashless';
 

@@ -87,7 +87,9 @@ class _AdminRefundScreenState extends State<AdminRefundScreen> {
                 final userName = user?['name'] ?? '-';
                 final amount = double.parse(r['amount'].toString());
                 final orderId = r['order_id'] ?? '-';
-                final date = (r['created_at'] as String?)?.formattedDateTime ?? '-';
+                final bookingDate = (booking?['booking_date'] as String?)?.formattedDate ?? '-';
+                final bookingTime = (booking?['booking_time'] as String? ?? '').shortTime;
+                final date = '$bookingDate, $bookingTime WIB';
                 final paidAt = (r['paid_at'] as String?)?.formattedDateTime;
                 final services = booking?['services'] as List?;
                 final service = (services != null && services.isNotEmpty)

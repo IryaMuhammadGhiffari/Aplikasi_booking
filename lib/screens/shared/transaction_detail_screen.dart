@@ -231,9 +231,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                 if (_data.paidAt != null)
                   _row('Dibayar Pada',
                       TransactionHelpers.formatDateTime(_data.paidAt)),
-                if (_data.createdAt != null)
-                  _row('Dibuat Pada',
-                      TransactionHelpers.formatDateTime(_data.createdAt)),
+                _row('Waktu Booking',
+                    '${_data.bookingDate}, ${_data.bookingTime} WIB'),
               ],
             ),
             const SizedBox(height: 12),
