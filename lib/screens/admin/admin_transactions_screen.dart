@@ -647,9 +647,22 @@ class _TrxCard extends StatelessWidget {
           ]),
         ),
 
+        // Timestamp
+        if (createdAt != null)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
+            child: Row(children: [
+              const Icon(Icons.schedule, color: AppColors.grey, size: 11),
+              const SizedBox(width: 4),
+              Text(createdAt!,
+                  style: GoogleFonts.poppins(
+                      color: AppColors.grey, fontSize: 10)),
+            ]),
+          ),
         // Detail layanan & tanggal
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
           child: Column(children: [
             Row(children: [
               Expanded(child: _infoItem(Icons.content_cut, 'Layanan', service)),
@@ -661,10 +674,6 @@ class _TrxCard extends StatelessWidget {
               Expanded(child: _infoItem(Icons.calendar_today, 'Tanggal', date)),
               Expanded(child: _infoItem(Icons.access_time, 'Pukul', time)),
             ]),
-            if (createdAt != null) ...[
-              const SizedBox(height: 6),
-              _infoItem(Icons.schedule, 'Transaksi dibuat', createdAt),
-            ],
             if (paidAt != null) ...[
               const SizedBox(height: 6),
               _infoItem(Icons.payments_outlined, 'Dibayar pada', paidAt),

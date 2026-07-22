@@ -268,6 +268,18 @@ class _BookingAdminCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Timestamp
+            if (createdAt != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(children: [
+                  const Icon(Icons.schedule, color: AppColors.grey, size: 11),
+                  const SizedBox(width: 4),
+                  Text(createdAt!,
+                      style: GoogleFonts.poppins(
+                          color: AppColors.grey, fontSize: 10)),
+                ]),
+              ),
             Row(children: [
               const Icon(Icons.person, color: AppColors.secondary, size: 16),
               const SizedBox(width: 6),
@@ -294,10 +306,6 @@ class _BookingAdminCard extends StatelessWidget {
                       Icons.calendar_today, 'Tanggal', dateStr.formattedDate)),
               Expanded(child: _infoItem(Icons.access_time, 'Pukul', timeStr)),
             ]),
-            if (createdAt != null) ...[
-              const SizedBox(height: 6),
-              _infoItem(Icons.schedule, 'Dibuat pada', createdAt),
-            ],
             const SizedBox(height: 8),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text('Total',
