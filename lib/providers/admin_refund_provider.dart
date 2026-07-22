@@ -18,6 +18,17 @@ class AdminRefundProvider with ChangeNotifier {
   String? get error => _error;
   int get pendingCount => _pendingRefunds.length;
 
+  /// Gabungan pending + history, diurutkan created_at terbaru
+  List get allRefunds {
+    final combined = [..._pendingRefunds, ..._historyRefunds];
+    combined.sort((a, b) {
+      final aTime = a['created_at'] as String? ?? '';
+      final bTime = b['created_at'] as String? ?? '';
+      return bTime.compareTo(aTime);
+    });
+    return combined;
+  }
+
   Future<void> fetchRefunds() async {
     _error = null;
     _isLoading = true;
