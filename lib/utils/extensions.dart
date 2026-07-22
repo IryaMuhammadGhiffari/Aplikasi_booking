@@ -76,13 +76,11 @@ extension DateFormatExt on String {
     }
   }
 
-  /// "2026-07-22T11:19:58.000000Z" → "22 Jul 2026, 11:19"
-  /// NOTE: Server clock Render off ~1 jam, waktu mungkin kurang akurat.
+  /// "2026-07-22T11:19:58.000000Z" → "22 Jul 2026, 18:19"
+  /// Otomatis konversi UTC → WIB (+7 jam).
   String get formattedDateTime {
     try {
-      // Hapus timezone (Z, +07:00) biar DateTime.parse pake local time
-      final clean = replaceAll(RegExp(r'[Zz](.*)?$|\.\d+'), '');
-      final d = DateTime.parse(clean);
+      final d = DateTime.parse(this);
       final hour = d.hour.toString().padLeft(2, '0');
       final minute = d.minute.toString().padLeft(2, '0');
       return '${d.day} ${_monthsIndo[d.month - 1]} ${d.year}, $hour:$minute';
