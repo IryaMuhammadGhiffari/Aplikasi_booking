@@ -77,6 +77,7 @@ extension DateFormatExt on String {
   }
 
   /// "2026-07-22T11:19:58.000000Z" → "22 Jul 2026, 11:19"
+  /// NOTE: Server clock Render off ~1 jam, waktu mungkin kurang akurat.
   String get formattedDateTime {
     try {
       // Hapus timezone (Z, +07:00) biar DateTime.parse pake local time
@@ -85,6 +86,26 @@ extension DateFormatExt on String {
       final hour = d.hour.toString().padLeft(2, '0');
       final minute = d.minute.toString().padLeft(2, '0');
       return '${d.day} ${_monthsIndo[d.month - 1]} ${d.year}, $hour:$minute';
+    } catch (_) {
+      return this;
+    }
+  }
+
+  /// "2026-07-22T11:19:58.000000Z" → "22 Jul 2026"
+  /// Hanya tanggal, tanpa jam — dipakai kalau server clock tidak akurat.
+  String get formattedDateOnly {
+    try {
+      if (length >= 10) {
+        final dateStr = substring(0, 10);
+        final parts = dateStr.split('-');
+        if (parts.length == 3) {
+          final d = int.parse(parts[2]);
+          final m = int.parse(parts[1]);
+          final y = parts[0];
+          return '$d ${_monthsIndo[m - 1]} $y';
+        }
+      }
+      return this;
     } catch (_) {
       return this;
     }

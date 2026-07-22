@@ -106,7 +106,8 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen>
                       style: GoogleFonts.poppins(
                         color: active ? AppColors.primary : AppColors.lightGrey,
                         fontSize: 12,
-                        fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            active ? FontWeight.bold : FontWeight.normal,
                       ),
                     )),
                   ),
@@ -132,16 +133,21 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                        const Icon(Icons.error_outline,
+                            color: AppColors.error, size: 48),
                         const SizedBox(height: 12),
-                        Text(p.error!, textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 14)),
+                        Text(p.error!,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                                color: AppColors.grey, fontSize: 14)),
                         const SizedBox(height: 16),
                         TextButton.icon(
                           onPressed: _fetch,
-                          icon: const Icon(Icons.refresh, color: AppColors.secondary),
+                          icon: const Icon(Icons.refresh,
+                              color: AppColors.secondary),
                           label: Text('Coba Lagi',
-                            style: GoogleFonts.poppins(color: AppColors.secondary)),
+                              style: GoogleFonts.poppins(
+                                  color: AppColors.secondary)),
                         ),
                       ],
                     ),
@@ -159,17 +165,19 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen>
                             height: MediaQuery.of(context).size.height * 0.3,
                           ),
                           Center(
-                            child: Column(
+                              child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Icon(Icons.calendar_today_outlined,
                                   size: 56, color: AppColors.grey),
                               const SizedBox(height: 12),
                               Text('Tidak ada booking',
-                                  style: GoogleFonts.poppins(color: AppColors.grey)),
+                                  style: GoogleFonts.poppins(
+                                      color: AppColors.grey)),
                               const SizedBox(height: 4),
                               Text('Booking akan muncul di sini',
-                                  style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 12)),
+                                  style: GoogleFonts.poppins(
+                                      color: AppColors.grey, fontSize: 12)),
                             ],
                           )),
                         ],
@@ -275,7 +283,7 @@ class _BookingAdminCard extends StatelessWidget {
                 child: Row(children: [
                   const Icon(Icons.schedule, color: AppColors.grey, size: 11),
                   const SizedBox(width: 4),
-                  Text(createdAt!,
+                  Text(createdAt,
                       style: GoogleFonts.poppins(
                           color: AppColors.grey, fontSize: 10)),
                 ]),
@@ -293,8 +301,13 @@ class _BookingAdminCard extends StatelessWidget {
             Row(children: [
               Expanded(
                   child: _infoItem(
-                      Icons.content_cut, 'Layanan',
-                      (booking['services'] as List?)?.map((s) => s['name']).join(', ') ?? booking['service']?['name'] ?? '-')),
+                      Icons.content_cut,
+                      'Layanan',
+                      (booking['services'] as List?)
+                              ?.map((s) => s['name'])
+                              .join(', ') ??
+                          booking['service']?['name'] ??
+                          '-')),
               Expanded(
                   child: _infoItem(Icons.person_outline, 'Barber',
                       booking['barber']?['name'] ?? '-')),
@@ -370,8 +383,7 @@ class _BookingAdminCard extends StatelessWidget {
   }
 
   Widget _buildActions(BuildContext context, String status) {
-    final isLoading =
-        context.watch<AdminBookingProvider>().isUpdating;
+    final isLoading = context.watch<AdminBookingProvider>().isUpdating;
 
     if (status == 'pending') {
       return Row(children: [
@@ -392,9 +404,8 @@ class _BookingAdminCard extends StatelessWidget {
             child: ElevatedButton.icon(
           onPressed: isLoading ? null : () => _update(context, 'confirmed'),
           icon: const Icon(Icons.check, size: 14, color: Colors.white),
-          label: isLoading
-              ? const Text('Memproses...')
-              : const Text('Konfirmasi'),
+          label:
+              isLoading ? const Text('Memproses...') : const Text('Konfirmasi'),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.success,
             foregroundColor: Colors.white,
@@ -429,13 +440,16 @@ class _BookingAdminCard extends StatelessWidget {
       final paymentStatus = payment?['status'] as String?;
       final paymentMethod = payment?['payment_method'] as String?;
       final isPaid = paymentStatus == 'paid';
-      final isCashlessPending = paymentStatus == 'pending' && paymentMethod == 'cashless';
+      final isCashlessPending =
+          paymentStatus == 'pending' && paymentMethod == 'cashless';
       final canComplete = isPaid || isCashlessPending;
 
       return SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: isLoading || !canComplete ? null : () => _update(context, 'completed'),
+            onPressed: isLoading || !canComplete
+                ? null
+                : () => _update(context, 'completed'),
             icon: const Icon(Icons.done_all, size: 16, color: Colors.white),
             label: isLoading
                 ? const Text('Memproses...',
@@ -520,8 +534,9 @@ class _BookingAdminCard extends StatelessWidget {
       'completed': 'diselesaikan',
       'cancelled': 'dibatalkan',
     };
-    final ok = await ctx.read<AdminBookingProvider>().updateStatus(
-        booking['id'], newStatus);
+    final ok = await ctx
+        .read<AdminBookingProvider>()
+        .updateStatus(booking['id'], newStatus);
     if (!ctx.mounted) return;
     if (ok) {
       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
@@ -532,7 +547,8 @@ class _BookingAdminCard extends StatelessWidget {
       ));
     } else {
       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-        content: Text(ctx.read<AdminBookingProvider>().error ?? 'Gagal memperbarui status'),
+        content: Text(ctx.read<AdminBookingProvider>().error ??
+            'Gagal memperbarui status'),
         backgroundColor: AppColors.error,
         behavior: SnackBarBehavior.floating,
       ));
