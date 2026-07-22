@@ -655,7 +655,7 @@ class _TrxCard extends StatelessWidget {
             child: Row(children: [
               const Icon(Icons.schedule, color: AppColors.grey, size: 11),
               const SizedBox(width: 4),
-              Text(createdAt!,
+              Text(createdAt,
                   style: GoogleFonts.poppins(
                       color: AppColors.grey, fontSize: 10)),
             ]),
